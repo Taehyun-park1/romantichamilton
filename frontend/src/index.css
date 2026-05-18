@@ -1,0 +1,294 @@
+@import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --radius-sm: 2px;
+  --radius-md: 4px;
+  --radius-lg: 6px;
+  --radius-xl: 8px;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+}
+
+:root {
+  /* Premium Leather Workshop - Minimalist Palette */
+  --primary: #3D3530; /* Deep Brown */
+  --primary-foreground: #F5F1ED; /* Off-white */
+  --sidebar-primary: #2A2420; /* Charcoal */
+  --sidebar-primary-foreground: #F5F1ED;
+  --chart-1: #5C4A42; /* Medium Brown */
+  --chart-2: #3D3530;
+  --chart-3: #2A2420;
+  --chart-4: #8B7355; /* Warm Brown */
+  --chart-5: #1A1410; /* Near Black */
+  
+  --radius: 6px;
+  --background: #F8F6F3; /* Warm Off-white */
+  --foreground: #2A2420; /* Charcoal Black */
+  --card: #FFFFFF; /* Pure White */
+  --card-foreground: #2A2420;
+  --popover: #FFFFFF;
+  --popover-foreground: #2A2420;
+  --secondary: #E8DDD0; /* Warm Beige */
+  --secondary-foreground: #2A2420;
+  --muted: #D4C5B9; /* Muted Taupe */
+  --muted-foreground: #5C4A42;
+  --accent: #8B7355; /* Warm Brown - Subtle Gold */
+  --accent-foreground: #FFFFFF;
+  --destructive: #8B4545;
+  --destructive-foreground: #FFFFFF;
+  --border: #E8DDD0;
+  --input: #FFFFFF;
+  --ring: #3D3530;
+  --sidebar: #F8F6F3;
+  --sidebar-foreground: #2A2420;
+  --sidebar-accent: #3D3530;
+  --sidebar-accent-foreground: #F5F1ED;
+  --sidebar-border: #E8DDD0;
+  --sidebar-ring: #3D3530;
+}
+
+.dark {
+  --primary: #D4AF7F;
+  --primary-foreground: #1A1410;
+  --sidebar-primary: #A67C6B;
+  --sidebar-primary-foreground: #F5F1ED;
+  --background: #1A1410;
+  --foreground: #F5F1ED;
+  --card: #2A2420;
+  --card-foreground: #F5F1ED;
+  --popover: #2A2420;
+  --popover-foreground: #F5F1ED;
+  --secondary: #3D3530;
+  --secondary-foreground: #E8DDD0;
+  --muted: #5C4A42;
+  --muted-foreground: #D4C5B9;
+  --accent: #D4AF7F;
+  --accent-foreground: #1A1410;
+  --destructive: #C45555;
+  --destructive-foreground: #1A1410;
+  --border: #3D3530;
+  --input: #2A2420;
+  --ring: #D4AF7F;
+  --sidebar: #2A2420;
+  --sidebar-foreground: #F5F1ED;
+  --sidebar-accent: #D4AF7F;
+  --sidebar-accent-foreground: #1A1410;
+  --sidebar-border: #3D3530;
+  --sidebar-ring: #D4AF7F;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [type="button"]:not(:disabled),
+  [type="submit"]:not(:disabled),
+  [type="reset"]:not(:disabled),
+  a[href],
+  select:not(:disabled),
+  input[type="checkbox"]:not(:disabled),
+  input[type="radio"]:not(:disabled) {
+    @apply cursor-pointer;
+  }
+  
+  /* Typography - Premium Minimalist */
+  h1 {
+    @apply font-serif text-5xl md:text-6xl font-normal tracking-tight;
+    letter-spacing: -0.02em;
+  }
+  
+  h2 {
+    @apply font-serif text-4xl md:text-5xl font-normal tracking-tight;
+    letter-spacing: -0.02em;
+  }
+  
+  h3 {
+    @apply font-serif text-2xl md:text-3xl font-normal;
+    letter-spacing: -0.01em;
+  }
+  
+  h4 {
+    @apply font-sans text-lg font-normal;
+  }
+  
+  p {
+    @apply font-sans text-base leading-relaxed;
+  }
+}
+
+@layer components {
+  .container {
+    width: 100%;
+    margin-left: auto;
+    margin-right: auto;
+    padding-left: 1.5rem;
+    padding-right: 1.5rem;
+  }
+
+  .flex {
+    min-height: 0;
+    min-width: 0;
+  }
+
+  @media (min-width: 768px) {
+    .container {
+      padding-left: 2rem;
+      padding-right: 2rem;
+    }
+  }
+
+  @media (min-width: 1024px) {
+    .container {
+      padding-left: 3rem;
+      padding-right: 3rem;
+      max-width: 1200px;
+    }
+  }
+  
+  /* Premium Leather Workshop - Minimal Components */
+  
+  /* Section Spacing - Generous whitespace */
+  .section-padding {
+    @apply py-20 md:py-32 lg:py-40;
+  }
+  
+  /* Button Styles - Minimal and refined */
+  .btn-primary {
+    @apply bg-primary text-primary-foreground px-5 py-2.5 text-xs md:text-sm font-normal;
+    transition: all 200ms ease-out;
+    border: 1px solid transparent;
+    letter-spacing: 0.5px;
+  }
+  
+  .btn-primary:hover {
+    @apply bg-primary/85;
+  }
+  
+  .btn-primary:active {
+    transform: scale(0.97);
+  }
+  
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground px-5 py-2.5 text-xs md:text-sm font-normal;
+    transition: all 200ms ease-out;
+    border: 1px solid transparent;
+    letter-spacing: 0.5px;
+  }
+  
+  .btn-secondary:hover {
+    @apply bg-secondary/75;
+  }
+  
+  .btn-secondary:active {
+    transform: scale(0.97);
+  }
+  
+  .btn-outline {
+    @apply border border-foreground text-foreground px-5 py-2.5 text-xs md:text-sm font-normal bg-transparent;
+    transition: all 200ms ease-out;
+    letter-spacing: 0.5px;
+  }
+  
+  .btn-outline:hover {
+    @apply bg-foreground/3;
+  }
+  
+  .btn-outline:active {
+    transform: scale(0.97);
+  }
+  
+  /* Product Card - Minimal design */
+  .product-card {
+    @apply bg-card;
+    transition: opacity 200ms ease-out;
+  }
+  
+  .product-card:hover {
+    @apply opacity-80;
+  }
+  
+  /* Image hover effect - Subtle scale */
+  .image-hover {
+    transition: transform 300ms ease-out;
+  }
+  
+  .image-hover:hover {
+    transform: scale(1.02);
+  }
+}
+
+/* Animations - Minimal and refined */
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@layer utilities {
+  .animate-fade-in {
+    animation: fade-in 0.4s ease-out;
+  }
+  
+  .animate-fade-in-up {
+    animation: fade-in-up 0.4s ease-out;
+  }
+  
+  @media (prefers-reduced-motion: reduce) {
+    .animate-fade-in,
+    .animate-fade-in-up {
+      animation: none;
+    }
+  }
+}
