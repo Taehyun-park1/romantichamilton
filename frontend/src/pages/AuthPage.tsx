@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { useLocation } from 'wouter';
 import { toast } from 'sonner';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
@@ -15,9 +15,25 @@ export default function AuthPage() {
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
-  if (isAuthenticated) {
-    navigate('/my');
-  }
+  useEffect(() => {
+    const searchParams = new URLSearchParams(window.location.search);
+    const error = searchParams.get('error');
+    const naverStatus = searchParams.get('naver');
+
+    if (error) {
+      toast.error(`로그인 처리 중 오류가 발생했습니다: ${error}`);
+    }
+
+    if (naverStatus === 'server_flow_ready') {
+      toast.info('네이버 인증은 완료되었습니다. Supabase 세션 연결 서버 로직을 추가해야 최종 로그인이 됩니다.');
+    }
+  }, []);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate('/my');
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleEmailAuth = async (event: React.FormEvent) => {
     event.preventDefault();
@@ -91,7 +107,10 @@ export default function AuthPage() {
   };
 
   const handleNaverLogin = () => {
-    window.location.href = '/api/auth/naver/start';
+    const naverAuthUrl =
+      import.meta.env.VITE_NAVER_AUTH_URL || '/api/auth/naver/start';
+
+    window.location.href = naverAuthUrl;
   };
 
   return (
