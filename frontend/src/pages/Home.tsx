@@ -5,8 +5,10 @@ import ProductGrid from '@/components/ProductGrid';
 import BrandStory from '@/components/BrandStory';
 import CustomOrder from '@/components/CustomOrder';
 import Workshop from '@/components/Workshop';
+import Journal from '@/components/Journal';
 import Contact from '@/components/Contact';
 import Footer from '@/components/Footer';
+import BackToTopButton from '@/components/BackToTopButton';
 
 export default function Home() {
   useEffect(() => {
@@ -27,7 +29,7 @@ export default function Home() {
   };
 
   return (
-    <div className="min-h-screen bg-background">
+    <div id="top" className="min-h-screen bg-background">
       <Header />
       <main className="pt-16 md:pt-20">
         <Hero onExplore={handleExplore} onCustom={handleCustom} />
@@ -35,8 +37,10 @@ export default function Home() {
         <BrandStory />
         <CustomOrder />
         <Workshop />
+        <Journal />
         <Contact />
       </main>
+      <BackToTopButton />
       <Footer />
     </div>
   );

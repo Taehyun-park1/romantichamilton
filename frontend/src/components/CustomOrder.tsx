@@ -1,51 +1,52 @@
 export default function CustomOrder() {
   const steps = [
-    { number: '01', title: '상담', description: '원하시는 제품과 디자인에 대해 상담합니다.' },
-    { number: '02', title: '디자인 선택', description: '기존 디자인 중 선택하거나 새로운 디자인을 제안합니다.' },
-    { number: '03', title: '가죽과 색상 선택', description: '천연 가죽의 종류와 색상을 선택합니다.' },
-    { number: '04', title: '제작', description: '선택하신 사항에 따라 손으로 정성스럽게 제작합니다.' },
-    { number: '05', title: '전달', description: '완성된 제품을 받으시고 오래 함께하세요.' },
+    ['01', '상담', '원하는 제품, 사용 목적, 선물 여부를 먼저 확인합니다.'],
+    ['02', '설계', '크기, 수납 방식, 색상, 금속 부자재를 함께 정합니다.'],
+    ['03', '제작', '재단부터 마감까지 손작업으로 진행하고 중간 확인을 거칩니다.'],
+    ['04', '전달', '관리 방법을 함께 안내하고 오래 쓰기 위한 수선 기준을 공유합니다.'],
   ];
 
   return (
-    <section id="custom" className="py-32 md:py-48 bg-background">
+    <section
+      id="custom"
+      className="scroll-mt-20 md:scroll-mt-24 py-24 md:py-36 bg-[#22352f] text-white"
+    >
       <div className="container">
-        {/* Section Header */}
-        <div className="mb-24 md:mb-32">
-          <h2 className="text-3xl md:text-4xl font-serif font-normal text-foreground mb-4">
-            Custom Order
-          </h2>
-          <p className="text-base text-foreground/60">
-            당신의 이야기를 담은 유일한 가죽 제품을 만들어보세요
-          </p>
-        </div>
+        <div className="grid grid-cols-1 lg:grid-cols-[1fr_0.9fr] gap-12 lg:gap-20 items-start">
+          <div>
+            <p className="mb-3 text-xs uppercase tracking-[0.16em] text-[#d4b16f]">
+              Custom Order
+            </p>
+            <h2 className="text-3xl md:text-5xl font-serif font-normal mb-6">
+              취향과 사용 습관에 맞춘 하나의 제품
+            </h2>
+            <p className="max-w-2xl text-base md:text-lg text-white/70 leading-relaxed">
+              Romantic Hamilton의 맞춤 제작은 단순히 이름을 새기는 과정이
+              아닙니다. 매일 어떻게 들고, 어디에 두고, 무엇을 담을지까지
+              고려해 구조를 정합니다.
+            </p>
+          </div>
 
-        {/* Process Steps */}
-        <div className="space-y-16 md:space-y-20 mb-32">
-          {steps.map((step) => (
-            <div key={step.number} className="flex gap-8 md:gap-12">
-              <div className="flex-shrink-0">
-                <div className="text-4xl md:text-5xl font-serif font-normal text-foreground/20">
-                  {step.number}
+          <div className="space-y-7">
+            {steps.map(([number, title, description]) => (
+              <div
+                key={number}
+                className="grid grid-cols-[4rem_1fr] gap-4 border-t border-white/15 pt-6"
+              >
+                <span className="font-serif text-3xl text-white/35">
+                  {number}
+                </span>
+                <div>
+                  <h3 className="mb-2 text-lg font-serif font-normal">
+                    {title}
+                  </h3>
+                  <p className="text-sm leading-relaxed text-white/65">
+                    {description}
+                  </p>
                 </div>
               </div>
-              <div className="flex-1 pt-2">
-                <h3 className="text-lg md:text-xl font-serif font-normal text-foreground mb-3">
-                  {step.title}
-                </h3>
-                <p className="text-base text-foreground/60 leading-relaxed">
-                  {step.description}
-                </p>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {/* CTA */}
-        <div className="flex justify-center">
-          <button className="btn-primary">
-            맞춤 제작 문의하기
-          </button>
+            ))}
+          </div>
         </div>
       </div>
     </section>

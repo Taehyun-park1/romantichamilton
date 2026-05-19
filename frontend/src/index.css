@@ -43,41 +43,40 @@
 }
 
 :root {
-  /* Premium Leather Workshop - Minimalist Palette */
-  --primary: #3D3530; /* Deep Brown */
-  --primary-foreground: #F5F1ED; /* Off-white */
-  --sidebar-primary: #2A2420; /* Charcoal */
+  --primary: #22352F;
+  --primary-foreground: #F7F2EA;
+  --sidebar-primary: #182722;
   --sidebar-primary-foreground: #F5F1ED;
-  --chart-1: #5C4A42; /* Medium Brown */
-  --chart-2: #3D3530;
-  --chart-3: #2A2420;
-  --chart-4: #8B7355; /* Warm Brown */
-  --chart-5: #1A1410; /* Near Black */
+  --chart-1: #7C4F38;
+  --chart-2: #22352F;
+  --chart-3: #C9A35F;
+  --chart-4: #516E79;
+  --chart-5: #171311;
   
   --radius: 6px;
-  --background: #F8F6F3; /* Warm Off-white */
-  --foreground: #2A2420; /* Charcoal Black */
-  --card: #FFFFFF; /* Pure White */
-  --card-foreground: #2A2420;
+  --background: #F8F6F1;
+  --foreground: #171311;
+  --card: #FFFFFF;
+  --card-foreground: #171311;
   --popover: #FFFFFF;
-  --popover-foreground: #2A2420;
-  --secondary: #E8DDD0; /* Warm Beige */
-  --secondary-foreground: #2A2420;
-  --muted: #D4C5B9; /* Muted Taupe */
-  --muted-foreground: #5C4A42;
-  --accent: #8B7355; /* Warm Brown - Subtle Gold */
+  --popover-foreground: #171311;
+  --secondary: #E8DED0;
+  --secondary-foreground: #171311;
+  --muted: #D9D0C3;
+  --muted-foreground: #5A5048;
+  --accent: #A06A3E;
   --accent-foreground: #FFFFFF;
   --destructive: #8B4545;
   --destructive-foreground: #FFFFFF;
   --border: #E8DDD0;
   --input: #FFFFFF;
-  --ring: #3D3530;
+  --ring: #22352F;
   --sidebar: #F8F6F3;
   --sidebar-foreground: #2A2420;
-  --sidebar-accent: #3D3530;
+  --sidebar-accent: #22352F;
   --sidebar-accent-foreground: #F5F1ED;
   --sidebar-border: #E8DDD0;
-  --sidebar-ring: #3D3530;
+  --sidebar-ring: #22352F;
 }
 
 .dark {
@@ -116,6 +115,9 @@
   }
   body {
     @apply bg-background text-foreground;
+    font-family: "Pretendard", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    word-break: keep-all;
+    overflow-wrap: break-word;
   }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
@@ -131,18 +133,21 @@
   
   /* Typography - Premium Minimalist */
   h1 {
-    @apply font-serif text-5xl md:text-6xl font-normal tracking-tight;
-    letter-spacing: -0.02em;
+    @apply text-5xl md:text-6xl font-semibold;
+    font-family: "Pretendard", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: 0;
   }
   
   h2 {
-    @apply font-serif text-4xl md:text-5xl font-normal tracking-tight;
-    letter-spacing: -0.02em;
+    @apply text-4xl md:text-5xl font-semibold;
+    font-family: "Pretendard", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: 0;
   }
   
   h3 {
-    @apply font-serif text-2xl md:text-3xl font-normal;
-    letter-spacing: -0.01em;
+    @apply text-2xl md:text-3xl font-semibold;
+    font-family: "Pretendard", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    letter-spacing: 0;
   }
   
   h4 {
@@ -152,9 +157,28 @@
   p {
     @apply font-sans text-base leading-relaxed;
   }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  p,
+  a,
+  button,
+  span,
+  label,
+  input,
+  textarea {
+    word-break: keep-all;
+    overflow-wrap: break-word;
+  }
 }
 
 @layer components {
+  .font-serif {
+    font-family: "Pretendard", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  }
+
   .container {
     width: 100%;
     margin-left: auto;
@@ -277,6 +301,10 @@
 }
 
 @layer utilities {
+  .font-serif {
+    font-family: "Pretendard", system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif !important;
+  }
+
   .animate-fade-in {
     animation: fade-in 0.4s ease-out;
   }
