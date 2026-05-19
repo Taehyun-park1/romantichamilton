@@ -150,7 +150,7 @@ VITE_NAVER_AUTH_URL=https://<YOUR_RENDER_SERVICE>.onrender.com/api/auth/naver/st
 ## Render 배포
 
 - Runtime: `Node`
-- Build Command: `npm install --legacy-peer-deps && npm run build`
+- Build Command: `npm install --legacy-peer-deps --include=dev && npm run build`
 - Start Command: `npm run start`
 
 Render는 네이버 로그인 백엔드가 필요할 때 사용합니다.
