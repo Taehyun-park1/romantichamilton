@@ -1,5 +1,7 @@
 import { useState } from 'react';
+import { Link } from 'wouter';
 import { Menu, X } from 'lucide-react';
+import { useAuth } from '@/contexts/AuthContext';
 
 const menuItems = [
   { label: '제품', href: '#products' },
@@ -11,6 +13,7 @@ const menuItems = [
 ];
 
 export default function Header() {
+  const { isAuthenticated, isAdmin, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
   const handleMenuClick = (href: string) => {
@@ -30,6 +33,35 @@ export default function Header() {
     setIsMenuOpen(false);
   };
 
+  const handleSignOut = async () => {
+    await signOut();
+    setIsMenuOpen(false);
+  };
+
+  const authLinks = isAuthenticated ? (
+    <>
+      <Link href="/my" className="text-xs md:text-sm text-foreground/60 hover:text-foreground transition-colors">
+        마이페이지
+      </Link>
+      {isAdmin && (
+        <Link href="/admin" className="text-xs md:text-sm text-foreground/60 hover:text-foreground transition-colors">
+          관리자
+        </Link>
+      )}
+      <button
+        type="button"
+        onClick={handleSignOut}
+        className="text-xs md:text-sm text-foreground/60 hover:text-foreground transition-colors"
+      >
+        로그아웃
+      </button>
+    </>
+  ) : (
+    <Link href="/auth" className="text-xs md:text-sm text-foreground/60 hover:text-foreground transition-colors">
+      로그인
+    </Link>
+  );
+
   return (
     <header className="fixed top-0 left-0 right-0 bg-background/90 backdrop-blur-sm border-b border-border z-50">
       <div className="container">
@@ -37,13 +69,13 @@ export default function Header() {
           <a
             href="#top"
             onClick={handleLogoClick}
-            className="text-base md:text-lg font-serif font-normal text-foreground"
+            className="text-base md:text-lg font-semibold text-foreground"
           >
             Romantic Hamilton
           </a>
 
           <div className="hidden md:flex items-center gap-8">
-            <nav className="flex items-center gap-8">
+            <nav className="flex items-center gap-7">
               {menuItems.map((item) => (
                 <button
                   key={item.label}
@@ -54,6 +86,7 @@ export default function Header() {
                   {item.label}
                 </button>
               ))}
+              {authLinks}
             </nav>
             <button
               type="button"
@@ -89,6 +122,31 @@ export default function Header() {
                   {item.label}
                 </button>
               ))}
+              <div className="border-t border-foreground/10 pt-3 space-y-3">
+                {isAuthenticated ? (
+                  <>
+                    <Link href="/my" className="block text-sm text-foreground/60">
+                      마이페이지
+                    </Link>
+                    {isAdmin && (
+                      <Link href="/admin" className="block text-sm text-foreground/60">
+                        관리자
+                      </Link>
+                    )}
+                    <button
+                      type="button"
+                      onClick={handleSignOut}
+                      className="block text-sm text-foreground/60"
+                    >
+                      로그아웃
+                    </button>
+                  </>
+                ) : (
+                  <Link href="/auth" className="block text-sm text-foreground/60">
+                    로그인
+                  </Link>
+                )}
+              </div>
             </div>
           </nav>
         )}

@@ -1,30 +1,56 @@
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { useAuth } from '@/contexts/AuthContext';
+import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 export default function Contact() {
+  const { user, profile } = useAuth();
   const [formData, setFormData] = useState({
-    name: '',
+    name: profile?.display_name ?? '',
     phone: '',
     message: '',
   });
+  const [submitting, setSubmitting] = useState(false);
 
   const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
-    const { name, value } = e.target;
+    const { name, value } = event.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
+  const handleSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
 
     if (!formData.name.trim() || !formData.phone.trim() || !formData.message.trim()) {
       toast.error('이름, 연락처, 문의 내용을 모두 입력해 주세요.');
       return;
     }
 
+    setSubmitting(true);
+
+    if (supabase && isSupabaseConfigured) {
+      const { error } = await supabase.from('contact_messages').insert({
+        user_id: user?.id ?? null,
+        name: formData.name,
+        phone: formData.phone,
+        message: formData.message,
+      });
+
+      if (error) {
+        setSubmitting(false);
+        toast.error(error.message);
+        return;
+      }
+    }
+
+    setSubmitting(false);
     toast.success('문의가 접수되었습니다.');
-    setFormData({ name: '', phone: '', message: '' });
+    setFormData({
+      name: profile?.display_name ?? '',
+      phone: '',
+      message: '',
+    });
   };
 
   return (
@@ -38,7 +64,7 @@ export default function Contact() {
             <p className="mb-3 text-xs uppercase tracking-[0.16em] text-accent">
               Contact
             </p>
-            <h2 className="text-3xl md:text-5xl font-serif font-normal text-foreground mb-8">
+            <h2 className="text-3xl md:text-5xl font-semibold text-foreground mb-8">
               제작 문의
             </h2>
 
@@ -117,8 +143,8 @@ export default function Contact() {
               />
             </div>
 
-            <button type="submit" className="btn-primary">
-              문의 보내기
+            <button type="submit" disabled={submitting} className="btn-primary">
+              {submitting ? '접수 중' : '문의 보내기'}
             </button>
           </form>
         </div>

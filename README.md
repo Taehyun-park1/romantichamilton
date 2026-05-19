@@ -1,15 +1,13 @@
 # Romantic Hamilton
 
-React, Vite, Express 기반의 Romantic Hamilton 웹사이트입니다. 프론트엔드는 Vite로 빌드하고, 백엔드는 Express가 빌드된 정적 파일을 서빙합니다.
+React, Vite, Express, Supabase 기반 웹 프로젝트입니다.
 
 ## 실행
 
 ```powershell
-npm install
+npm install --legacy-peer-deps
 npm run dev
 ```
-
-개발 서버는 기본적으로 `http://localhost:3000`을 사용하고, 이미 사용 중이면 다음 포트로 자동 실행됩니다.
 
 ## 검증
 
@@ -18,116 +16,120 @@ npm run check
 npm run build
 ```
 
-## 주요 폴더
+## Supabase 설정
 
-```text
-backend/
-  index.ts              # Render 배포용 Express 정적 파일 서버
-
-frontend/
-  public/rh-images/     # 사이트에 사용하는 Romantic Hamilton 이미지
-  src/
-    components/         # 화면 컴포넌트
-    data/products.ts    # 제품, 클래스, 이미지 데이터
-    pages/Home.tsx      # 메인 화면 섹션 순서
-
-dist/
-  public/               # Vite 빌드 결과
-```
-
-## 배포 구조
-
-권장 구조는 아래처럼 역할을 나누는 방식입니다.
-
-```text
-Vercel   -> 프론트엔드 정적 사이트 배포
-Supabase -> 데이터베이스, 인증, 스토리지
-Render   -> Express 백엔드 또는 API 서버 배포
-```
-
-현재 사이트는 정적 화면 중심이라 Supabase 연결 코드는 아직 없습니다. 이후 상품 관리, 문의 저장, 관리자 로그인 같은 기능을 붙일 때 Supabase를 연결하면 됩니다.
-
-## Vercel 배포
-
-Vercel은 `vercel.json`을 사용합니다.
-
-```json
-{
-  "framework": "vite",
-  "buildCommand": "npm run build",
-  "outputDirectory": "dist/public"
-}
-```
-
-Vercel 프로젝트 설정:
-
-- Framework Preset: `Vite`
-- Build Command: `npm run build`
-- Output Directory: `dist/public`
-- Install Command: `npm install`
-
-환경변수가 필요하면 Vercel Project Settings의 Environment Variables에 등록합니다.
-
-```text
-VITE_SUPABASE_URL
-VITE_SUPABASE_ANON_KEY
-```
-
-## Supabase 준비
-
-Supabase 프로젝트를 만든 뒤 아래 값을 `.env`와 배포 환경변수에 넣습니다.
-
-```powershell
-Copy-Item .env.example .env
-```
+`.env.local`에는 프론트에서 안전하게 사용 가능한 값만 넣습니다.
 
 ```text
 VITE_SUPABASE_URL=Supabase Project URL
 VITE_SUPABASE_ANON_KEY=Supabase anon public key
 ```
 
-추후 연결하기 좋은 테이블 예시는 다음과 같습니다.
+절대 프론트 코드나 `.env.local`에 `service_role key`를 넣지 마세요.
+
+Supabase SQL Editor에서 아래 파일을 실행합니다.
+
+```text
+supabase/schema.sql
+```
+
+이 스키마는 다음 테이블과 RLS 정책을 만듭니다.
+
+- `profiles`: 사용자 프로필과 `role`
+- `contact_messages`: 문의 내역
+- `class_reservations`: 클래스 예약
+
+관리자는 Supabase SQL Editor에서 직접 지정합니다.
 
 ```sql
-create table contact_messages (
-  id uuid primary key default gen_random_uuid(),
-  name text not null,
-  phone text not null,
-  message text not null,
-  created_at timestamptz not null default now()
-);
+update public.profiles
+set role = 'admin'
+where email = 'admin@example.com';
 ```
 
-주의할 점:
+## Supabase Auth Provider
 
-- 프론트엔드에 넣는 키는 `anon public key`만 사용합니다.
-- `service_role key`는 절대 브라우저 코드나 Vercel 프론트 환경변수에 넣지 않습니다.
-- 관리자 기능이나 비공개 데이터 처리는 Render 백엔드에서 처리합니다.
+Supabase Dashboard에서 설정합니다.
 
-## Render 배포
+1. Authentication
+2. Providers
+3. Email 활성화
+4. Kakao 활성화
+5. Site URL 설정
 
-Render는 `render.yaml`을 사용할 수 있습니다.
-
-```yaml
-services:
-  - type: web
-    name: romantic-hamilton
-    runtime: node
-    buildCommand: npm install && npm run build
-    startCommand: npm run start
+```text
+https://romantichamilton.store
 ```
 
-Render Web Service 설정:
+Redirect URL에는 최소 아래 값을 추가합니다.
+
+```text
+https://romantichamilton.store/my
+http://localhost:3000/my
+http://localhost:3001/my
+```
+
+## 네이버 로그인
+
+Supabase 기본 OAuth provider에는 네이버가 없으므로 백엔드 연동 구조로 분리했습니다.
+
+프론트 버튼:
+
+```text
+/api/auth/naver/start
+```
+
+Render 백엔드 환경변수:
+
+```text
+PUBLIC_SITE_URL=https://romantichamilton.store
+NAVER_CLIENT_ID=
+NAVER_CLIENT_SECRET=
+```
+
+현재 백엔드는 네이버 OAuth 토큰과 프로필을 받는 구조까지 준비되어 있습니다. 네이버 계정을 Supabase Auth 세션으로 완전히 변환하려면 Render 백엔드에서 `SUPABASE_SERVICE_ROLE_KEY`를 사용해 서버 전용 로직을 추가해야 합니다. 이 키는 프론트에 절대 넣으면 안 됩니다.
+
+## 배포
+
+### Vercel
+
+프론트 정적 배포용입니다.
+
+- Framework Preset: `Vite`
+- Build Command: `npm run build`
+- Output Directory: `dist/public`
+- Install Command: `npm install --legacy-peer-deps`
+
+환경변수:
+
+```text
+VITE_SUPABASE_URL
+VITE_SUPABASE_ANON_KEY
+```
+
+### Render
+
+Express 서버와 네이버 OAuth 백엔드용입니다.
 
 - Runtime: `Node`
-- Build Command: `npm install && npm run build`
+- Build Command: `npm install --legacy-peer-deps && npm run build`
 - Start Command: `npm run start`
-- Environment: `NODE_ENV=production`
 
-Render는 `PORT`를 자동으로 주입하므로 별도로 고정하지 않아도 됩니다.
+환경변수:
 
-## 배포 선택 기준
+```text
+NODE_ENV=production
+PUBLIC_SITE_URL=https://romantichamilton.store
+NAVER_CLIENT_ID=
+NAVER_CLIENT_SECRET=
+```
 
-- 정적 소개 사이트만 필요하면 Vercel만으로 충분합니다.
-- 문의 저장, 로그인, 관리자 페이지가 필요하면 Supabase를 추가합니다.
-- 비공개 API, 결제 웹훅, 관리자 서버 로직이 필요하면 Render 백엔드를 사용합니다.
+## 인증 기능
+
+- 비로그인 사용자는 사이트를 자유롭게 볼 수 있습니다.
+- 이메일 회원가입은 이름/닉네임, 이메일, 비밀번호만 받습니다.
+- 전화번호는 회원가입에서 받지 않고 문의 폼에서만 입력합니다.
+- 비밀번호는 `profiles` 테이블에 저장하지 않습니다.
+- 로그인 사용자는 `/my`에서 내 문의와 예약을 볼 수 있습니다.
+- 로그인 사용자는 `/reserve`에서 클래스 예약을 남길 수 있습니다.
+- `profiles.role = 'admin'`인 사용자만 `/admin/*`에 접근할 수 있습니다.

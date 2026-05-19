@@ -3,14 +3,24 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import NotFound from "@/pages/NotFound";
 import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
+import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import AdminDashboard from "./pages/AdminDashboard";
+import AuthPage from "./pages/AuthPage";
 import Home from "./pages/Home";
+import MyPage from "./pages/MyPage";
+import ReservationPage from "./pages/ReservationPage";
 
 
 function Router() {
   return (
     <Switch>
       <Route path={"/"} component={Home} />
+      <Route path={"/auth"} component={AuthPage} />
+      <Route path={"/my"} component={MyPage} />
+      <Route path={"/reserve"} component={ReservationPage} />
+      <Route path={"/admin"} component={AdminDashboard} />
+      <Route path={"/admin/:rest*"} component={AdminDashboard} />
       <Route path={"/404"} component={NotFound} />
       {/* Final fallback route */}
       <Route component={NotFound} />
@@ -31,8 +41,10 @@ function App() {
         // switchable
       >
         <TooltipProvider>
-          <Toaster />
-          <Router />
+          <AuthProvider>
+            <Toaster />
+            <Router />
+          </AuthProvider>
         </TooltipProvider>
       </ThemeProvider>
     </ErrorBoundary>
