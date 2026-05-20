@@ -68,6 +68,10 @@ export default function MyPage() {
 
   if (!user) return null;
 
+  const displayName =
+    profile?.display_name || user.user_metadata?.name || '카카오 사용자';
+  const accountLabel = user.email || `카카오 계정 ${user.id.slice(0, 8)}`;
+
   return (
     <main className="min-h-screen bg-background pt-24 md:pt-28">
       <section className="container py-16 md:py-24">
@@ -77,9 +81,9 @@ export default function MyPage() {
               My Page
             </p>
             <h1 className="mb-4 text-3xl md:text-5xl font-semibold text-foreground">
-              {profile?.display_name ?? user.email}님의 내역
+              {displayName}님의 내역
             </h1>
-            <p className="text-foreground/60">{user.email}</p>
+            <p className="text-foreground/60">{accountLabel}</p>
           </div>
           <div className="flex gap-3">
             <Link href="/reserve" className="btn-primary">

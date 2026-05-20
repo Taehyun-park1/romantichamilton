@@ -98,6 +98,7 @@ export default function AuthPage() {
       provider: 'kakao',
       options: {
         redirectTo: `${window.location.origin}/my`,
+        scopes: 'profile_nickname profile_image',
       },
     });
 
