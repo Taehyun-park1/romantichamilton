@@ -18,14 +18,9 @@ export default function AuthPage() {
   useEffect(() => {
     const searchParams = new URLSearchParams(window.location.search);
     const error = searchParams.get('error');
-    const naverStatus = searchParams.get('naver');
 
     if (error) {
       toast.error(`로그인 처리 중 오류가 발생했습니다: ${error}`);
-    }
-
-    if (naverStatus === 'server_flow_ready') {
-      toast.info('네이버 인증은 완료되었습니다. Supabase 세션 연결 서버 로직을 추가해야 최종 로그인이 됩니다.');
     }
   }, []);
 

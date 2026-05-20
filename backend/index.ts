@@ -7,13 +7,112 @@ import { fileURLToPath } from "url";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
+interface NaverProfileResponse {
+  resultcode?: string;
+  message?: string;
+  response?: {
+    id?: string;
+    email?: string;
+    name?: string;
+    nickname?: string;
+    profile_image?: string;
+  };
+}
+
+interface SupabaseGenerateLinkResponse {
+  action_link?: string;
+  error?: string;
+  error_description?: string;
+  msg?: string;
+}
+
+function getRequestOrigin(req: express.Request) {
+  const protocol = req.get("x-forwarded-proto") || req.protocol;
+  return `${protocol}://${req.get("host")}`;
+}
+
+function getFrontendUrl() {
+  return (process.env.PUBLIC_SITE_URL || "http://localhost:3000").replace(/\/+$/, "");
+}
+
+function getNaverCallbackBaseUrl(req: express.Request) {
+  return (process.env.NAVER_CALLBACK_BASE_URL || getRequestOrigin(req)).replace(/\/+$/, "");
+}
+
+function createNaverRedirectUri(req: express.Request) {
+  return `${getNaverCallbackBaseUrl(req)}/api/auth/naver/callback`;
+}
+
+function createStateCookie(state: string, req: express.Request) {
+  const secure = getRequestOrigin(req).startsWith("https://") ? "; Secure" : "";
+  return `naver_oauth_state=${state}; HttpOnly; SameSite=Lax; Path=/; Max-Age=300${secure}`;
+}
+
+function clearStateCookie(req: express.Request) {
+  const secure = getRequestOrigin(req).startsWith("https://") ? "; Secure" : "";
+  return `naver_oauth_state=; HttpOnly; SameSite=Lax; Path=/; Max-Age=0${secure}`;
+}
+
+function createSyntheticNaverEmail(naverId: string) {
+  return `naver-${naverId}@auth.romantichamilton.local`;
+}
+
+async function createSupabaseMagicLink(profile: Required<NaverProfileResponse>["response"]) {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !serviceRoleKey) {
+    throw new Error("supabase_admin_not_configured");
+  }
+
+  const normalizedSupabaseUrl = supabaseUrl.replace(/\/rest\/v1\/?$/, "").replace(/\/+$/, "");
+  const naverId = profile.id;
+
+  if (!naverId) {
+    throw new Error("naver_profile_missing_id");
+  }
+
+  const displayName = profile.nickname || profile.name || "네이버 사용자";
+  const email = profile.email || createSyntheticNaverEmail(naverId);
+  const response = await fetch(`${normalizedSupabaseUrl}/auth/v1/admin/generate_link`, {
+    method: "POST",
+    headers: {
+      apikey: serviceRoleKey,
+      Authorization: `Bearer ${serviceRoleKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      type: "magiclink",
+      email,
+      redirect_to: `${getFrontendUrl()}/my`,
+      data: {
+        display_name: displayName,
+        name: displayName,
+        avatar_url: profile.profile_image || null,
+        picture: profile.profile_image || null,
+        oauth_provider: "naver",
+        provider_user_id: naverId,
+        real_email: profile.email || null,
+      },
+    }),
+  });
+
+  const payload = (await response.json()) as SupabaseGenerateLinkResponse;
+
+  if (!response.ok || !payload.action_link) {
+    throw new Error(payload.error_description || payload.error || payload.msg || "supabase_magic_link_failed");
+  }
+
+  return payload.action_link;
+}
+
 async function startServer() {
   const app = express();
   const server = createServer(app);
+  app.set("trust proxy", 1);
 
-  app.get("/api/auth/naver/start", (_req, res) => {
+  app.get("/api/auth/naver/start", (req, res) => {
     const clientId = process.env.NAVER_CLIENT_ID;
-    const baseUrl = process.env.PUBLIC_SITE_URL || "http://localhost:3000";
 
     if (!clientId) {
       res.redirect("/auth?error=naver_not_configured");
@@ -21,7 +120,7 @@ async function startServer() {
     }
 
     const state = crypto.randomUUID();
-    const redirectUri = `${baseUrl.replace(/\/+$/, "")}/api/auth/naver/callback`;
+    const redirectUri = createNaverRedirectUri(req);
     const authorizeUrl = new URL("https://nid.naver.com/oauth2.0/authorize");
 
     authorizeUrl.searchParams.set("response_type", "code");
@@ -29,7 +128,7 @@ async function startServer() {
     authorizeUrl.searchParams.set("redirect_uri", redirectUri);
     authorizeUrl.searchParams.set("state", state);
 
-    res.setHeader("Set-Cookie", `naver_oauth_state=${state}; HttpOnly; SameSite=Lax; Path=/; Max-Age=300`);
+    res.setHeader("Set-Cookie", createStateCookie(state, req));
     res.redirect(authorizeUrl.toString());
   });
 
@@ -50,14 +149,13 @@ async function startServer() {
 
     const clientId = process.env.NAVER_CLIENT_ID;
     const clientSecret = process.env.NAVER_CLIENT_SECRET;
-    const baseUrl = process.env.PUBLIC_SITE_URL || "http://localhost:3000";
 
     if (!clientId || !clientSecret) {
       res.redirect("/auth?error=naver_not_configured");
       return;
     }
 
-    const redirectUri = `${baseUrl.replace(/\/+$/, "")}/api/auth/naver/callback`;
+    const redirectUri = createNaverRedirectUri(req);
     const tokenUrl = new URL("https://nid.naver.com/oauth2.0/token");
 
     tokenUrl.searchParams.set("grant_type", "authorization_code");
@@ -84,17 +182,26 @@ async function startServer() {
           Authorization: `Bearer ${tokenPayload.access_token}`,
         },
       });
-      const profilePayload = await profileResponse.json();
+      const profilePayload = (await profileResponse.json()) as NaverProfileResponse;
 
       console.log("Naver OAuth profile received", {
         id: profilePayload?.response?.id,
         email: profilePayload?.response?.email,
       });
 
-      res.redirect("/auth?naver=server_flow_ready");
+      if (!profileResponse.ok || !profilePayload.response?.id) {
+        res.redirect("/auth?error=naver_profile_failed");
+        return;
+      }
+
+      const actionLink = await createSupabaseMagicLink(profilePayload.response);
+
+      res.setHeader("Set-Cookie", clearStateCookie(req));
+      res.redirect(actionLink);
     } catch (error) {
       console.error("Naver OAuth failed", error);
-      res.redirect("/auth?error=naver_failed");
+      const message = error instanceof Error ? error.message : "naver_failed";
+      res.redirect(`/auth?error=${encodeURIComponent(message)}`);
     }
   });
 

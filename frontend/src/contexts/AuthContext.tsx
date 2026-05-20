@@ -24,10 +24,24 @@ const AuthContext = createContext<AuthContextValue | null>(null);
 
 function readProvider(user: User) {
   const identity = user.identities?.[0];
-  const provider = identity?.provider ?? user.app_metadata.provider ?? 'email';
-  const providerUserId = identity?.id ?? user.id;
+  const metadata = user.user_metadata;
+  const provider =
+    metadata.oauth_provider || identity?.provider || user.app_metadata.provider || 'email';
+  const providerUserId = metadata.provider_user_id || identity?.id || user.id;
 
   return { provider, providerUserId };
+}
+
+function readEmail(user: User) {
+  if (typeof user.user_metadata.real_email === 'string') {
+    return user.user_metadata.real_email;
+  }
+
+  if (user.email?.endsWith('@auth.romantichamilton.local')) {
+    return null;
+  }
+
+  return user.email ?? null;
 }
 
 function readDisplayName(user: User) {
@@ -59,7 +73,7 @@ async function upsertProfile(user: User) {
     .upsert(
       {
         id: user.id,
-        email: user.email ?? null,
+        email: readEmail(user),
         display_name: displayName,
         avatar_url: avatarUrl,
         provider,

@@ -10,3 +10,13 @@ services:
         value: production
       - key: PUBLIC_SITE_URL
         value: https://romantichamilton.store
+      - key: NAVER_CALLBACK_BASE_URL
+        sync: false
+      - key: NAVER_CLIENT_ID
+        sync: false
+      - key: NAVER_CLIENT_SECRET
+        sync: false
+      - key: SUPABASE_URL
+        sync: false
+      - key: SUPABASE_SERVICE_ROLE_KEY
+        sync: false

@@ -83,7 +83,7 @@ http://localhost:3001/my
 
 ## 네이버 로그인 연결
 
-네이버는 Supabase 기본 provider가 아니므로 Express 백엔드 OAuth 흐름으로 분리되어 있습니다.
+네이버는 Supabase 기본 provider가 아니므로 Express 백엔드 OAuth 흐름으로 분리되어 있습니다. 백엔드는 네이버 인증 후 Supabase Admin API로 매직링크를 생성해 `/my`로 로그인 세션을 연결합니다.
 
 프론트 버튼은 아래 엔드포인트로 이동합니다.
 
@@ -126,11 +126,20 @@ https://<YOUR_RENDER_SERVICE>.onrender.com/api/auth/naver/callback
 ```text
 NODE_ENV=production
 PUBLIC_SITE_URL=https://romantichamilton.store
+NAVER_CALLBACK_BASE_URL=https://<YOUR_RENDER_SERVICE>.onrender.com
 NAVER_CLIENT_ID=네이버 Client ID
 NAVER_CLIENT_SECRET=네이버 Client Secret
+SUPABASE_URL=https://<SUPABASE_PROJECT_REF>.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=Supabase service_role key
 ```
 
-현재 백엔드는 네이버 OAuth 토큰과 프로필을 받는 구조까지 준비되어 있습니다. 네이버 계정을 Supabase Auth 세션으로 완전히 변환하려면 Render 백엔드에서 `SUPABASE_SERVICE_ROLE_KEY`를 사용하는 서버 전용 로직을 추가해야 합니다. 이 키는 프론트에 절대 넣으면 안 됩니다.
+`SUPABASE_SERVICE_ROLE_KEY`는 Render 백엔드에만 넣고, Vercel이나 `.env.local`에는 절대 넣지 마세요.
+
+Vercel 프론트 환경변수에는 네이버 시작 URL을 Render 주소로 지정합니다.
+
+```text
+VITE_NAVER_AUTH_URL=https://<YOUR_RENDER_SERVICE>.onrender.com/api/auth/naver/start
+```
 
 ## Vercel 배포
 

@@ -70,8 +70,9 @@ export default function MyPage() {
   if (!user) return null;
 
   const displayName =
-    profile?.display_name || user.user_metadata?.name || '카카오 사용자';
-  const accountLabel = user.email || `카카오 계정 ${user.id.slice(0, 8)}`;
+    profile?.display_name || user.user_metadata?.name || '소셜 로그인 사용자';
+  const providerLabel = profile?.provider === 'naver' ? '네이버' : '카카오';
+  const accountLabel = profile?.email || `${providerLabel} 계정 ${user.id.slice(0, 8)}`;
 
   return (
     <>
