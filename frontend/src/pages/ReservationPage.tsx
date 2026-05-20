@@ -10,6 +10,14 @@ const classOptions = [
   'Custom Order Session',
 ];
 
+function getLocalDateInputValue(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
 export default function ReservationPage() {
   const [, navigate] = useLocation();
   const { user, loading } = useAuth();
@@ -17,6 +25,7 @@ export default function ReservationPage() {
   const [preferredDate, setPreferredDate] = useState('');
   const [note, setNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const today = getLocalDateInputValue(new Date());
 
   if (!loading && !user) {
     navigate('/auth');
@@ -37,6 +46,11 @@ export default function ReservationPage() {
 
     if (!preferredDate) {
       toast.error('희망 날짜를 선택해 주세요.');
+      return;
+    }
+
+    if (preferredDate < today) {
+      toast.error('지난 날짜는 선택할 수 없습니다.');
       return;
     }
 
@@ -101,6 +115,7 @@ export default function ReservationPage() {
               <input
                 id="preferredDate"
                 type="date"
+                min={today}
                 value={preferredDate}
                 onChange={(event) => setPreferredDate(event.target.value)}
                 className="w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground"

@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { toast } from 'sonner';
+import Header from '@/components/Header';
 import { useAuth } from '@/contexts/AuthContext';
 import {
   type ClassReservation,
@@ -73,8 +74,10 @@ export default function MyPage() {
   const accountLabel = user.email || `카카오 계정 ${user.id.slice(0, 8)}`;
 
   return (
-    <main className="min-h-screen bg-background pt-24 md:pt-28">
-      <section className="container py-16 md:py-24">
+    <>
+      <Header />
+      <main className="min-h-screen bg-background pt-24 md:pt-28">
+        <section className="container py-16 md:py-24">
         <div className="mb-12 flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
           <div>
             <p className="mb-3 text-xs uppercase tracking-[0.16em] text-accent">
@@ -153,7 +156,8 @@ export default function MyPage() {
             </div>
           </section>
         </div>
-      </section>
-    </main>
+        </section>
+      </main>
+    </>
   );
 }

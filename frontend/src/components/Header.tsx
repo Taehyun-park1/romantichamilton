@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link } from 'wouter';
+import { Link, useLocation } from 'wouter';
 import { Menu, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 
@@ -13,6 +13,7 @@ const menuItems = [
 ];
 
 export default function Header() {
+  const [location, navigate] = useLocation();
   const { isAuthenticated, isAdmin, signOut } = useAuth();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
 
@@ -22,6 +23,8 @@ export default function Header() {
 
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      window.location.href = `/${href}`;
     }
 
     setIsMenuOpen(false);
@@ -29,7 +32,13 @@ export default function Header() {
 
   const handleLogoClick = (event: React.MouseEvent<HTMLAnchorElement>) => {
     event.preventDefault();
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    if (location === '/') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      navigate('/');
+    }
+
     setIsMenuOpen(false);
   };
 
