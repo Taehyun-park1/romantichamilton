@@ -26,6 +26,109 @@ interface SupabaseGenerateLinkResponse {
   msg?: string;
 }
 
+interface ContactRequestBody {
+  name?: unknown;
+  phone?: unknown;
+  email?: unknown;
+  message?: unknown;
+  website?: unknown;
+}
+
+interface ResendResponse {
+  id?: string;
+  message?: string;
+}
+
+const contactAttempts = new Map<string, number[]>();
+const CONTACT_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const CONTACT_RATE_LIMIT_MAX_REQUESTS = 5;
+
+function normalizeText(value: unknown, maxLength: number) {
+  return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function isContactRateLimited(ip: string) {
+  const now = Date.now();
+  const recentAttempts = (contactAttempts.get(ip) ?? []).filter(
+    (attemptedAt) => now - attemptedAt < CONTACT_RATE_LIMIT_WINDOW_MS
+  );
+
+  if (recentAttempts.length >= CONTACT_RATE_LIMIT_MAX_REQUESTS) {
+    contactAttempts.set(ip, recentAttempts);
+    return true;
+  }
+
+  recentAttempts.push(now);
+  contactAttempts.set(ip, recentAttempts);
+  return false;
+}
+
+async function sendContactEmail(input: {
+  name: string;
+  phone: string;
+  email: string;
+  message: string;
+}) {
+  const apiKey = process.env.RESEND_API_KEY;
+  const from = process.env.CONTACT_FROM_EMAIL;
+  const to = process.env.CONTACT_TO_EMAIL;
+
+  if (!apiKey || !from || !to) {
+    throw new Error("contact_email_not_configured");
+  }
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from,
+      to: [to],
+      reply_to: input.email,
+      subject: `[Romantic Hamilton] ${input.name}님의 제작 문의`,
+      text: [
+        `이름: ${input.name}`,
+        `연락처: ${input.phone}`,
+        `이메일: ${input.email}`,
+        "",
+        input.message,
+      ].join("\n"),
+      html: `
+        <h2>새로운 제작 문의</h2>
+        <p><strong>이름:</strong> ${escapeHtml(input.name)}</p>
+        <p><strong>연락처:</strong> ${escapeHtml(input.phone)}</p>
+        <p><strong>이메일:</strong> ${escapeHtml(input.email)}</p>
+        <hr />
+        <p style="white-space: pre-wrap">${escapeHtml(input.message)}</p>
+      `,
+    }),
+  });
+  const payload = (await response.json().catch(() => ({}))) as ResendResponse;
+
+  if (!response.ok || !payload.id) {
+    console.error("Contact email delivery failed", {
+      status: response.status,
+      message: payload.message,
+    });
+    throw new Error("contact_email_delivery_failed");
+  }
+}
+
 function getRequestOrigin(req: express.Request) {
   const protocol = req.get("x-forwarded-proto") || req.protocol;
   return `${protocol}://${req.get("host")}`;
@@ -110,6 +213,69 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
   app.set("trust proxy", 1);
+  app.use(express.json({ limit: "16kb" }));
+
+  app.use("/api", (req, res, next) => {
+    const allowedOrigin = getFrontendUrl();
+    const origin = req.get("origin");
+
+    if (
+      origin &&
+      (origin === allowedOrigin || /^http:\/\/localhost:\d+$/.test(origin))
+    ) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+      res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    }
+
+    if (req.method === "OPTIONS") {
+      res.sendStatus(204);
+      return;
+    }
+
+    next();
+  });
+
+  app.post("/api/contact", async (req, res) => {
+    const body = (req.body ?? {}) as ContactRequestBody;
+
+    // Bots commonly fill hidden fields that real users cannot see.
+    if (normalizeText(body.website, 200)) {
+      res.status(200).json({ success: true });
+      return;
+    }
+
+    const name = normalizeText(body.name, 60);
+    const phone = normalizeText(body.phone, 30);
+    const email = normalizeText(body.email, 254);
+    const message = normalizeText(body.message, 3000);
+
+    if (!name || !phone || !isValidEmail(email) || message.length < 10) {
+      res.status(400).json({
+        message: "입력 내용을 확인해 주세요.",
+      });
+      return;
+    }
+
+    const requesterIp = req.ip || req.socket.remoteAddress || "unknown";
+    if (isContactRateLimited(requesterIp)) {
+      res.status(429).json({
+        message: "문의가 너무 자주 전송되었습니다. 잠시 후 다시 시도해 주세요.",
+      });
+      return;
+    }
+
+    try {
+      await sendContactEmail({ name, phone, email, message });
+      res.status(200).json({ success: true });
+    } catch (error) {
+      console.error("Contact endpoint failed", error);
+      res.status(502).json({
+        message: "문의 이메일 전송에 실패했습니다. 잠시 후 다시 시도해 주세요.",
+      });
+    }
+  });
 
   app.get("/api/auth/naver/start", (req, res) => {
     const clientId = process.env.NAVER_CLIENT_ID;
@@ -218,7 +384,8 @@ async function startServer() {
     res.sendFile(path.join(staticPath, "index.html"));
   });
 
-  const port = process.env.PORT || 3000;
+  const port =
+    process.env.PORT || (process.env.NODE_ENV === "production" ? 3000 : 3001);
 
   server.listen(port, () => {
     console.log(`Server running on http://localhost:${port}/`);

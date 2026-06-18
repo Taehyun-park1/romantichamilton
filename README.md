@@ -1,5 +1,33 @@
 # Romantic Hamilton
 
+## 문의 이메일 전송
+
+문의 폼은 Supabase에 저장하지 않고 Render 백엔드의 `/api/contact`를 통해
+관리자 이메일로 바로 전송합니다. 이메일 발송에는 Resend를 사용합니다.
+
+Render 환경변수:
+
+```text
+RESEND_API_KEY=re_...
+CONTACT_FROM_EMAIL=Romantic Hamilton <contact@인증한-도메인>
+CONTACT_TO_EMAIL=실제로-문의받을-이메일
+```
+
+`CONTACT_FROM_EMAIL`의 도메인은 Resend에서 DNS 인증을 완료해야 합니다.
+Vercel 프론트엔드와 Render 백엔드를 분리해서 배포하면 Vercel에도 다음 값을
+설정합니다.
+
+```text
+VITE_API_BASE_URL=https://<YOUR_RENDER_SERVICE>.onrender.com
+```
+
+로컬에서는 터미널 두 개에서 각각 실행합니다.
+
+```powershell
+npm run dev:backend
+npm run dev
+```
+
 React, Vite, Express, Supabase 기반 웹 프로젝트입니다.
 
 ## 실행
@@ -170,6 +198,7 @@ Render는 네이버 로그인 백엔드가 필요할 때 사용합니다.
 - 이메일 회원가입은 이름/닉네임, 이메일, 비밀번호만 받습니다.
 - 전화번호는 회원가입에서 받지 않고 문의 폼에서만 입력합니다.
 - 비밀번호는 `profiles` 테이블에 저장하지 않습니다.
-- 로그인 사용자는 `/my`에서 내 문의와 예약을 볼 수 있습니다.
+- 문의 폼은 DB에 저장하지 않고 관리자 이메일로 바로 전송합니다.
+- 로그인 사용자는 `/my`에서 자신의 예약 내역을 볼 수 있습니다.
 - 로그인 사용자는 `/reserve`에서 클래스 예약을 남길 수 있습니다.
 - `profiles.role = 'admin'`인 사용자만 `/admin/*`에 접근할 수 있습니다.

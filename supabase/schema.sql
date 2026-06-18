@@ -15,15 +15,6 @@ create table if not exists public.profiles (
   updated_at timestamptz not null default now()
 );
 
-create table if not exists public.contact_messages (
-  id uuid primary key default gen_random_uuid(),
-  user_id uuid references auth.users(id) on delete set null,
-  name text not null,
-  phone text not null,
-  message text not null,
-  created_at timestamptz not null default now()
-);
-
 create table if not exists public.class_reservations (
   id uuid primary key default gen_random_uuid(),
   user_id uuid not null references auth.users(id) on delete cascade,
@@ -36,7 +27,6 @@ create table if not exists public.class_reservations (
 );
 
 alter table public.profiles enable row level security;
-alter table public.contact_messages enable row level security;
 alter table public.class_reservations enable row level security;
 
 create or replace function public.is_admin()
@@ -98,18 +88,6 @@ on public.profiles
 for all
 using (public.is_admin())
 with check (public.is_admin());
-
-drop policy if exists "contact_messages_insert_anyone" on public.contact_messages;
-create policy "contact_messages_insert_anyone"
-on public.contact_messages
-for insert
-with check (user_id is null or auth.uid() = user_id);
-
-drop policy if exists "contact_messages_select_own_or_admin" on public.contact_messages;
-create policy "contact_messages_select_own_or_admin"
-on public.contact_messages
-for select
-using (auth.uid() = user_id or public.is_admin());
 
 drop policy if exists "class_reservations_insert_own" on public.class_reservations;
 create policy "class_reservations_insert_own"

@@ -31,15 +31,6 @@ export interface Profile {
   updated_at?: string;
 }
 
-export interface ContactMessage {
-  id: string;
-  user_id: string | null;
-  name: string;
-  phone: string;
-  message: string;
-  created_at: string;
-}
-
 export interface ClassReservation {
   id: string;
   user_id: string;

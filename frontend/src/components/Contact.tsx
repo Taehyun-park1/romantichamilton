@@ -1,97 +1,138 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
-import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(
+  /\/+$/,
+  ''
+);
+
+function getContactApiUrl() {
+  return `${apiBaseUrl ?? ''}/api/contact`;
+}
 
 export default function Contact() {
-  const { user, profile } = useAuth();
+  const { profile } = useAuth();
   const [formData, setFormData] = useState({
-    name: profile?.display_name ?? '',
+    name: '',
     phone: '',
+    email: '',
     message: '',
+    website: '',
   });
   const [submitting, setSubmitting] = useState(false);
+
+  useEffect(() => {
+    setFormData((previous) => ({
+      ...previous,
+      name: previous.name || profile?.display_name || '',
+      email: previous.email || profile?.email || '',
+    }));
+  }, [profile?.display_name, profile?.email]);
 
   const handleChange = (
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = event.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    setFormData((previous) => ({ ...previous, [name]: value }));
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
 
-    if (!formData.name.trim() || !formData.phone.trim() || !formData.message.trim()) {
-      toast.error('이름, 연락처, 문의 내용을 모두 입력해 주세요.');
+    if (
+      !formData.name.trim() ||
+      !formData.phone.trim() ||
+      !formData.email.trim() ||
+      !formData.message.trim()
+    ) {
+      toast.error('이름, 연락처, 이메일, 문의 내용을 모두 입력해 주세요.');
       return;
     }
 
     setSubmitting(true);
 
-    if (supabase && isSupabaseConfigured) {
-      const { error } = await supabase.from('contact_messages').insert({
-        user_id: user?.id ?? null,
-        name: formData.name,
-        phone: formData.phone,
-        message: formData.message,
+    try {
+      const response = await fetch(getContactApiUrl(), {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(formData),
       });
+      const payload = (await response.json().catch(() => null)) as
+        | { message?: string }
+        | null;
 
-      if (error) {
-        setSubmitting(false);
-        toast.error(error.message);
-        return;
+      if (!response.ok) {
+        throw new Error(payload?.message || '문의 이메일을 보내지 못했습니다.');
       }
-    }
 
-    setSubmitting(false);
-    toast.success('문의가 접수되었습니다.');
-    setFormData({
-      name: profile?.display_name ?? '',
-      phone: '',
-      message: '',
-    });
+      toast.success('문의가 이메일로 전송되었습니다.');
+      setFormData({
+        name: profile?.display_name ?? '',
+        phone: '',
+        email: profile?.email ?? '',
+        message: '',
+        website: '',
+      });
+    } catch (error) {
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : '문의 이메일을 보내지 못했습니다.'
+      );
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <section
       id="contact"
-      className="scroll-mt-20 md:scroll-mt-24 py-24 md:py-36 bg-[#f4f0ea]"
+      className="scroll-mt-20 bg-[#f4f0ea] py-24 md:scroll-mt-24 md:py-36"
     >
       <div className="container">
-        <div className="grid grid-cols-1 lg:grid-cols-[0.8fr_1.2fr] gap-12 lg:gap-20">
+        <div className="grid grid-cols-1 gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
           <div>
             <p className="mb-3 text-xs uppercase tracking-[0.16em] text-accent">
               Contact
             </p>
-            <h2 className="text-3xl md:text-5xl font-semibold text-foreground mb-8">
+            <h2 className="mb-8 text-3xl font-semibold text-foreground md:text-5xl">
               제작 문의
             </h2>
 
             <div className="space-y-7">
               <div>
-                <h3 className="text-xs font-normal text-foreground/50 uppercase tracking-[0.14em] mb-2">
+                <h3 className="mb-2 text-xs font-normal uppercase tracking-[0.14em] text-foreground/50">
                   Phone
                 </h3>
-                <a href="tel:+821012345678" className="text-lg text-foreground hover:text-accent transition-colors">
+                <a
+                  href="tel:+821012345678"
+                  className="text-lg text-foreground transition-colors hover:text-accent"
+                >
                   +82 10-1234-5678
                 </a>
               </div>
               <div>
-                <h3 className="text-xs font-normal text-foreground/50 uppercase tracking-[0.14em] mb-2">
+                <h3 className="mb-2 text-xs font-normal uppercase tracking-[0.14em] text-foreground/50">
                   Email
                 </h3>
-                <a href="mailto:hello@romantichamilton.com" className="text-lg text-foreground hover:text-accent transition-colors">
+                <a
+                  href="mailto:hello@romantichamilton.com"
+                  className="text-lg text-foreground transition-colors hover:text-accent"
+                >
                   hello@romantichamilton.com
                 </a>
               </div>
               <div>
-                <h3 className="text-xs font-normal text-foreground/50 uppercase tracking-[0.14em] mb-2">
+                <h3 className="mb-2 text-xs font-normal uppercase tracking-[0.14em] text-foreground/50">
                   Hours
                 </h3>
                 <p className="text-lg text-foreground">
-                  월-금 10:00 - 18:00<br />
-                  토 11:00 - 17:00
+                  평일 10:00 - 18:00
+                  <br />
+                  토요일 11:00 - 17:00
                 </p>
               </div>
             </div>
@@ -99,52 +140,106 @@ export default function Contact() {
 
           <form onSubmit={handleSubmit} className="space-y-7">
             <div>
-              <label htmlFor="name" className="block text-sm font-normal text-foreground/60 mb-2">
+              <label
+                htmlFor="contact-name"
+                className="mb-2 block text-sm font-normal text-foreground/60"
+              >
                 이름
               </label>
               <input
                 type="text"
-                id="name"
+                id="contact-name"
                 name="name"
                 value={formData.name}
                 onChange={handleChange}
-                className="w-full px-0 py-3 border-b border-foreground/20 bg-transparent text-foreground focus:outline-none focus:border-foreground transition-colors"
+                autoComplete="name"
+                maxLength={60}
+                required
+                className="w-full border-b border-foreground/20 bg-transparent px-0 py-3 text-foreground transition-colors focus:border-foreground focus:outline-none"
                 placeholder="성함을 입력해 주세요"
               />
             </div>
 
-            <div>
-              <label htmlFor="phone" className="block text-sm font-normal text-foreground/60 mb-2">
-                연락처
-              </label>
-              <input
-                type="tel"
-                id="phone"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                className="w-full px-0 py-3 border-b border-foreground/20 bg-transparent text-foreground focus:outline-none focus:border-foreground transition-colors"
-                placeholder="010-1234-5678"
-              />
+            <div className="grid gap-7 md:grid-cols-2">
+              <div>
+                <label
+                  htmlFor="contact-phone"
+                  className="mb-2 block text-sm font-normal text-foreground/60"
+                >
+                  연락처
+                </label>
+                <input
+                  type="tel"
+                  id="contact-phone"
+                  name="phone"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  autoComplete="tel"
+                  maxLength={30}
+                  required
+                  className="w-full border-b border-foreground/20 bg-transparent px-0 py-3 text-foreground transition-colors focus:border-foreground focus:outline-none"
+                  placeholder="010-1234-5678"
+                />
+              </div>
+
+              <div>
+                <label
+                  htmlFor="contact-email"
+                  className="mb-2 block text-sm font-normal text-foreground/60"
+                >
+                  이메일
+                </label>
+                <input
+                  type="email"
+                  id="contact-email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  autoComplete="email"
+                  maxLength={254}
+                  required
+                  className="w-full border-b border-foreground/20 bg-transparent px-0 py-3 text-foreground transition-colors focus:border-foreground focus:outline-none"
+                  placeholder="name@example.com"
+                />
+              </div>
             </div>
 
             <div>
-              <label htmlFor="message" className="block text-sm font-normal text-foreground/60 mb-2">
+              <label
+                htmlFor="contact-message"
+                className="mb-2 block text-sm font-normal text-foreground/60"
+              >
                 문의 내용
               </label>
               <textarea
-                id="message"
+                id="contact-message"
                 name="message"
                 value={formData.message}
                 onChange={handleChange}
                 rows={5}
-                className="w-full px-0 py-3 border-b border-foreground/20 bg-transparent text-foreground focus:outline-none focus:border-foreground transition-colors resize-none"
-                placeholder="원하는 제품, 색상, 각인 여부를 적어 주세요"
+                minLength={10}
+                maxLength={3000}
+                required
+                className="w-full resize-none border-b border-foreground/20 bg-transparent px-0 py-3 text-foreground transition-colors focus:border-foreground focus:outline-none"
+                placeholder="원하시는 제품, 색상, 각인 여부 등을 적어 주세요"
+              />
+            </div>
+
+            <div className="hidden" aria-hidden="true">
+              <label htmlFor="contact-website">Website</label>
+              <input
+                type="text"
+                id="contact-website"
+                name="website"
+                value={formData.website}
+                onChange={handleChange}
+                tabIndex={-1}
+                autoComplete="off"
               />
             </div>
 
             <button type="submit" disabled={submitting} className="btn-primary">
-              {submitting ? '접수 중' : '문의 보내기'}
+              {submitting ? '전송 중' : '문의 보내기'}
             </button>
           </form>
         </div>

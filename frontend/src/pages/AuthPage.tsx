@@ -122,7 +122,7 @@ export default function AuthPage() {
             {mode === 'login' ? '로그인' : '이메일 회원가입'}
           </h1>
           <p className="mb-10 text-sm leading-relaxed text-foreground/60">
-            로그인은 선택 기능입니다. 로그인하면 내 문의 내역을 확인하고 클래스 예약을 남길 수 있습니다.
+            문의는 로그인 없이 이메일로 보낼 수 있습니다. 로그인하면 클래스 예약을 신청하고 내 예약 내역을 확인할 수 있습니다.
           </p>
 
           <div className="mb-8 grid grid-cols-2 gap-2">
