@@ -1,15 +1,17 @@
 import { useEffect, useState } from 'react';
+import emailjs, { type EmailJSResponseStatus } from '@emailjs/browser';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)?.replace(
-  /\/+$/,
-  ''
-);
-
-function getContactApiUrl() {
-  return `${apiBaseUrl ?? ''}/api/contact`;
-}
+const emailJsServiceId = import.meta.env.VITE_EMAILJS_SERVICE_ID as
+  | string
+  | undefined;
+const emailJsTemplateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID as
+  | string
+  | undefined;
+const emailJsPublicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY as
+  | string
+  | undefined;
 
 export default function Contact() {
   const { profile } = useAuth();
@@ -50,23 +52,39 @@ export default function Contact() {
       return;
     }
 
+    if (!emailJsServiceId || !emailJsTemplateId || !emailJsPublicKey) {
+      toast.error('문의 이메일 설정이 완료되지 않았습니다.');
+      return;
+    }
+
+    // A hidden honeypot field blocks simple form bots without storing any data.
+    if (formData.website) {
+      toast.success('문의가 이메일로 전송되었습니다.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
-      const response = await fetch(getContactApiUrl(), {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
+      await emailjs.send(
+        emailJsServiceId,
+        emailJsTemplateId,
+        {
+          user_name: formData.name.trim(),
+          user_phone: formData.phone.trim(),
+          user_email: formData.email.trim(),
+          message: formData.message.trim(),
+          submitted_at: new Date().toLocaleString('ko-KR'),
         },
-        body: JSON.stringify(formData),
-      });
-      const payload = (await response.json().catch(() => null)) as
-        | { message?: string }
-        | null;
-
-      if (!response.ok) {
-        throw new Error(payload?.message || '문의 이메일을 보내지 못했습니다.');
-      }
+        {
+          publicKey: emailJsPublicKey,
+          blockHeadless: true,
+          limitRate: {
+            id: 'romantic-hamilton-contact',
+            throttle: 10_000,
+          },
+        }
+      );
 
       toast.success('문의가 이메일로 전송되었습니다.');
       setFormData({
@@ -77,10 +95,15 @@ export default function Contact() {
         website: '',
       });
     } catch (error) {
+      const emailJsError = error as EmailJSResponseStatus;
+      console.error('EmailJS send failed', {
+        status: emailJsError.status,
+        text: emailJsError.text,
+      });
       toast.error(
-        error instanceof Error
-          ? error.message
-          : '문의 이메일을 보내지 못했습니다.'
+        emailJsError.status === 429
+          ? '문의가 너무 자주 전송되었습니다. 잠시 후 다시 시도해 주세요.'
+          : '문의 이메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.'
       );
     } finally {
       setSubmitting(false);
