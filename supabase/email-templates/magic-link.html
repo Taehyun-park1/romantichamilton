@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ko">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Romantic Hamilton 로그인</title>
+  </head>
+  <body style="margin:0;padding:0;background:#F8F6F1;color:#171311;font-family:Pretendard,-apple-system,BlinkMacSystemFont,'Segoe UI',Arial,sans-serif;">
+    <table role="presentation" width="100%" cellspacing="0" cellpadding="0" border="0" style="width:100%;background:#F8F6F1;">
+      <tr>
+        <td align="center" style="padding:48px 16px;">
+          <table role="presentation" width="600" cellspacing="0" cellpadding="0" border="0" style="width:100%;max-width:600px;">
+            <tr>
+              <td style="padding:0 0 22px;text-align:center;">
+                <a href="https://romantichamilton.store" style="color:#171311;font-family:Georgia,'Times New Roman',serif;font-size:25px;text-decoration:none;">Romantic Hamilton</a>
+                <div style="margin-top:9px;color:#A06A3E;font-size:10px;letter-spacing:.22em;text-transform:uppercase;">Leather Workshop</div>
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#22352F;padding:38px 40px;">
+                <div style="color:#CDAA86;font-size:11px;letter-spacing:.18em;text-transform:uppercase;">Sign In</div>
+                <h1 style="margin:12px 0 0;color:#FFFFFF;font-family:Georgia,'Times New Roman',serif;font-size:31px;font-weight:400;line-height:1.4;">안전하게 계정으로<br />로그인하세요.</h1>
+              </td>
+            </tr>
+            <tr>
+              <td style="background:#FFFFFF;padding:38px 40px 42px;">
+                <p style="margin:0;color:#352F2B;font-size:15px;line-height:1.85;">아래 버튼을 누르면 Romantic Hamilton 계정으로 안전하게 로그인됩니다.</p>
+                <table role="presentation" cellspacing="0" cellpadding="0" border="0" style="margin-top:30px;">
+                  <tr>
+                    <td style="background:#A06A3E;">
+                      <a href="{{ .ConfirmationURL }}" style="display:inline-block;padding:15px 26px;color:#FFFFFF;font-size:13px;font-weight:600;letter-spacing:.04em;text-decoration:none;">로그인 계속하기</a>
+                    </td>
+                  </tr>
+                </table>
+                <div style="margin-top:30px;padding:20px 22px;background:#F4F0EA;color:#746B63;font-size:12px;line-height:1.8;">
+                  본인이 요청하지 않은 로그인이라면 이 메일을 무시해 주세요.<br />
+                  <span style="color:#A06A3E;overflow-wrap:anywhere;">{{ .ConfirmationURL }}</span>
+                </div>
+              </td>
+            </tr>
+            <tr>
+              <td style="padding:24px 12px 0;text-align:center;color:#8A8178;font-size:11px;line-height:1.7;">
+                본 메일은 발신 전용입니다.<br />
+                <a href="https://romantichamilton.store" style="color:#A06A3E;text-decoration:none;">romantichamilton.store</a>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
+    </table>
+  </body>
+</html>

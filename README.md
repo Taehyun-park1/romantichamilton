@@ -20,6 +20,16 @@ VITE_API_BASE_URL=https://<YOUR_RENDER_SERVICE>.onrender.com
 
 문의 메일의 Reply-To는 문의자가 입력한 이메일로 서버에서 자동 설정합니다.
 
+문의 메일 HTML은 `backend/email/contactEmailTemplate.ts`에서 관리합니다.
+Supabase 인증 메일 템플릿은 아래 파일에 준비되어 있으며, Supabase Dashboard의
+Authentication > Emails > Templates에서 각 템플릿의 Source에 붙여넣습니다.
+
+```text
+supabase/email-templates/confirm-signup.html
+supabase/email-templates/reset-password.html
+supabase/email-templates/magic-link.html
+```
+
 React, Vite, Express, Supabase 기반 웹 프로젝트입니다.
 
 ## 실행

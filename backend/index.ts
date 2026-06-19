@@ -3,6 +3,7 @@ import { createServer } from "http";
 import crypto from "crypto";
 import path from "path";
 import { fileURLToPath } from "url";
+import { renderContactEmailHtml } from "./email/contactEmailTemplate";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -82,15 +83,6 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
-function escapeHtml(value: string) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
 function isContactRateLimited(ip: string) {
   const now = Date.now();
   const recentRequests = (contactRequestsByIp.get(ip) ?? []).filter(
@@ -159,15 +151,13 @@ async function sendContactEmail(body: ContactRequestBody) {
         "",
         message,
       ].join("\n"),
-      html: `
-        <h2>새로운 제작 문의</h2>
-        <p><strong>이름:</strong> ${escapeHtml(name)}</p>
-        <p><strong>연락처:</strong> ${escapeHtml(phone)}</p>
-        <p><strong>이메일:</strong> ${escapeHtml(email)}</p>
-        <p><strong>접수일시:</strong> ${escapeHtml(submittedAt)}</p>
-        <hr />
-        <p style="white-space: pre-wrap">${escapeHtml(message)}</p>
-      `,
+      html: renderContactEmailHtml({
+        name,
+        phone,
+        email,
+        message,
+        submittedAt,
+      }),
     }),
   });
 
