@@ -2,28 +2,23 @@
 
 ## 문의 이메일 전송
 
-문의 폼은 DB에 저장하지 않고 EmailJS를 통해 관리자 이메일로 바로 전송합니다.
-EmailJS에서 Email Service와 Email Template을 만든 뒤 다음 환경변수를
-`.env.local`과 Vercel에 등록합니다.
+문의 폼은 DB에 저장하지 않고 Express 백엔드에서 Resend API를 호출해
+관리자 이메일로 바로 전송합니다. Resend API Key는 프런트엔드에 노출하지 않고
+Render 환경변수에만 등록합니다.
 
 ```text
-VITE_EMAILJS_SERVICE_ID=service_xxxxx
-VITE_EMAILJS_TEMPLATE_ID=template_xxxxx
-VITE_EMAILJS_PUBLIC_KEY=xxxxxxxxxxxx
+RESEND_API_KEY=re_xxxxxxxxx
+RESEND_FROM_EMAIL=contact@mail.romantichamilton.store
+CONTACT_TO_EMAIL=관리자 이메일
 ```
 
-EmailJS 템플릿에서 사용하는 변수:
+Vercel 프런트엔드에는 Render 백엔드 주소를 등록합니다.
 
 ```text
-{{user_name}}
-{{user_phone}}
-{{user_email}}
-{{message}}
-{{submitted_at}}
+VITE_API_BASE_URL=https://<YOUR_RENDER_SERVICE>.onrender.com
 ```
 
-답장받을 주소(Reply-To)는 `{{user_email}}`로 설정합니다. EmailJS 대시보드의
-도메인 Allowlist에는 운영 도메인 `https://romantichamilton.store`를 등록합니다.
+문의 메일의 Reply-To는 문의자가 입력한 이메일로 서버에서 자동 설정합니다.
 
 React, Vite, Express, Supabase 기반 웹 프로젝트입니다.
 

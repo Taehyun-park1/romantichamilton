@@ -1,17 +1,9 @@
 import { useEffect, useState } from 'react';
-import emailjs, { type EmailJSResponseStatus } from '@emailjs/browser';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
 
-const emailJsServiceId = import.meta.env.VITE_EMAILJS_SERVICE_ID as
-  | string
-  | undefined;
-const emailJsTemplateId = import.meta.env.VITE_EMAILJS_TEMPLATE_ID as
-  | string
-  | undefined;
-const emailJsPublicKey = import.meta.env.VITE_EMAILJS_PUBLIC_KEY as
-  | string
-  | undefined;
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)
+  ?.replace(/\/+$/, '');
 
 export default function Contact() {
   const { profile } = useAuth();
@@ -52,11 +44,6 @@ export default function Contact() {
       return;
     }
 
-    if (!emailJsServiceId || !emailJsTemplateId || !emailJsPublicKey) {
-      toast.error('문의 이메일 설정이 완료되지 않았습니다.');
-      return;
-    }
-
     // A hidden honeypot field blocks simple form bots without storing any data.
     if (formData.website) {
       toast.success('문의가 이메일로 전송되었습니다.');
@@ -66,25 +53,21 @@ export default function Contact() {
     setSubmitting(true);
 
     try {
-      await emailjs.send(
-        emailJsServiceId,
-        emailJsTemplateId,
-        {
-          user_name: formData.name.trim(),
-          user_phone: formData.phone.trim(),
-          user_email: formData.email.trim(),
-          message: formData.message.trim(),
-          submitted_at: new Date().toLocaleString('ko-KR'),
+      const response = await fetch(`${apiBaseUrl ?? ''}/api/contact`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
         },
-        {
-          publicKey: emailJsPublicKey,
-          blockHeadless: true,
-          limitRate: {
-            id: 'romantic-hamilton-contact',
-            throttle: 10_000,
-          },
-        }
-      );
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const requestError = new Error('contact_send_failed') as Error & {
+          status?: number;
+        };
+        requestError.status = response.status;
+        throw requestError;
+      }
 
       toast.success('문의가 이메일로 전송되었습니다.');
       setFormData({
@@ -95,13 +78,10 @@ export default function Contact() {
         website: '',
       });
     } catch (error) {
-      const emailJsError = error as EmailJSResponseStatus;
-      console.error('EmailJS send failed', {
-        status: emailJsError.status,
-        text: emailJsError.text,
-      });
+      const requestError = error as Error & { status?: number };
+      console.error('Contact email send failed', requestError);
       toast.error(
-        emailJsError.status === 429
+        requestError.status === 429
           ? '문의가 너무 자주 전송되었습니다. 잠시 후 다시 시도해 주세요.'
           : '문의 이메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.'
       );

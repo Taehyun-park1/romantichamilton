@@ -26,6 +26,23 @@ interface SupabaseGenerateLinkResponse {
   msg?: string;
 }
 
+interface ContactRequestBody {
+  name?: unknown;
+  phone?: unknown;
+  email?: unknown;
+  message?: unknown;
+  website?: unknown;
+}
+
+interface ResendErrorResponse {
+  message?: string;
+  name?: string;
+}
+
+const CONTACT_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
+const CONTACT_RATE_LIMIT_MAX_REQUESTS = 5;
+const contactRequestsByIp = new Map<string, number[]>();
+
 function getRequestOrigin(req: express.Request) {
   const protocol = req.get("x-forwarded-proto") || req.protocol;
   return `${protocol}://${req.get("host")}`;
@@ -55,6 +72,114 @@ function clearStateCookie(req: express.Request) {
 
 function createSyntheticNaverEmail(naverId: string) {
   return `naver-${naverId}@auth.romantichamilton.local`;
+}
+
+function normalizeText(value: unknown, maxLength: number) {
+  return typeof value === "string" ? value.trim().slice(0, maxLength) : "";
+}
+
+function isValidEmail(value: string) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
+}
+
+function isContactRateLimited(ip: string) {
+  const now = Date.now();
+  const recentRequests = (contactRequestsByIp.get(ip) ?? []).filter(
+    (requestedAt) => now - requestedAt < CONTACT_RATE_LIMIT_WINDOW_MS
+  );
+
+  if (recentRequests.length >= CONTACT_RATE_LIMIT_MAX_REQUESTS) {
+    contactRequestsByIp.set(ip, recentRequests);
+    return true;
+  }
+
+  recentRequests.push(now);
+  contactRequestsByIp.set(ip, recentRequests);
+  return false;
+}
+
+function getAllowedOrigins() {
+  return new Set(
+    [
+      process.env.PUBLIC_SITE_URL,
+      "https://www.romantichamilton.store",
+      "http://localhost:3000",
+      "http://127.0.0.1:3000",
+    ].filter((origin): origin is string => Boolean(origin))
+  );
+}
+
+async function sendContactEmail(body: ContactRequestBody) {
+  const name = normalizeText(body.name, 60);
+  const phone = normalizeText(body.phone, 30);
+  const email = normalizeText(body.email, 254).toLowerCase();
+  const message = normalizeText(body.message, 3000);
+
+  if (!name || !phone || !isValidEmail(email) || message.length < 10) {
+    throw new Error("invalid_contact_payload");
+  }
+
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const fromEmail =
+    process.env.RESEND_FROM_EMAIL || "contact@mail.romantichamilton.store";
+  const toEmail = process.env.CONTACT_TO_EMAIL;
+
+  if (!resendApiKey || !toEmail) {
+    throw new Error("resend_not_configured");
+  }
+
+  const submittedAt = new Date().toLocaleString("ko-KR", {
+    timeZone: "Asia/Seoul",
+  });
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: `Romantic Hamilton <${fromEmail}>`,
+      to: [toEmail],
+      reply_to: email,
+      subject: `[Romantic Hamilton] ${name}님의 제작 문의`,
+      text: [
+        `이름: ${name}`,
+        `연락처: ${phone}`,
+        `이메일: ${email}`,
+        `접수일시: ${submittedAt}`,
+        "",
+        message,
+      ].join("\n"),
+      html: `
+        <h2>새로운 제작 문의</h2>
+        <p><strong>이름:</strong> ${escapeHtml(name)}</p>
+        <p><strong>연락처:</strong> ${escapeHtml(phone)}</p>
+        <p><strong>이메일:</strong> ${escapeHtml(email)}</p>
+        <p><strong>접수일시:</strong> ${escapeHtml(submittedAt)}</p>
+        <hr />
+        <p style="white-space: pre-wrap">${escapeHtml(message)}</p>
+      `,
+    }),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as ResendErrorResponse;
+    console.error("Resend contact email failed", {
+      status: response.status,
+      name: payload.name,
+      message: payload.message,
+    });
+    throw new Error("resend_send_failed");
+  }
 }
 
 async function createSupabaseMagicLink(profile: Required<NaverProfileResponse>["response"]) {
@@ -110,6 +235,61 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
   app.set("trust proxy", 1);
+  app.use(express.json({ limit: "16kb" }));
+
+  app.use("/api", (req, res, next) => {
+    const origin = req.get("origin");
+    const allowedOrigins = getAllowedOrigins();
+
+    if (origin && allowedOrigins.has(origin)) {
+      res.setHeader("Access-Control-Allow-Origin", origin);
+      res.setHeader("Vary", "Origin");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+      res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
+    }
+
+    if (origin && !allowedOrigins.has(origin)) {
+      res.sendStatus(403);
+      return;
+    }
+
+    if (req.method === "OPTIONS") {
+      res.sendStatus(204);
+      return;
+    }
+
+    next();
+  });
+
+  app.post("/api/contact", async (req, res) => {
+    const body = (req.body ?? {}) as ContactRequestBody;
+
+    if (normalizeText(body.website, 200)) {
+      res.status(200).json({ success: true });
+      return;
+    }
+
+    const ip = req.ip || req.socket.remoteAddress || "unknown";
+    if (isContactRateLimited(ip)) {
+      res.status(429).json({ error: "too_many_requests" });
+      return;
+    }
+
+    try {
+      await sendContactEmail(body);
+      res.status(200).json({ success: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "contact_failed";
+
+      if (message === "invalid_contact_payload") {
+        res.status(400).json({ error: message });
+        return;
+      }
+
+      console.error("Contact request failed", { message });
+      res.status(503).json({ error: "contact_service_unavailable" });
+    }
+  });
 
   app.get("/api/auth/naver/start", (req, res) => {
     const clientId = process.env.NAVER_CLIENT_ID;
