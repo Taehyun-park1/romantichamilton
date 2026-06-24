@@ -5,6 +5,7 @@ import { Route, Switch } from "wouter";
 import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
+import Footer from "./components/Footer";
 import AdminDashboard from "./pages/AdminDashboard";
 import AuthPage from "./pages/AuthPage";
 import Home from "./pages/Home";
@@ -44,6 +45,7 @@ function App() {
           <AuthProvider>
             <Toaster />
             <Router />
+            <Footer />
           </AuthProvider>
         </TooltipProvider>
       </ThemeProvider>

@@ -7,7 +7,6 @@ import CustomOrder from '@/components/CustomOrder';
 import Workshop from '@/components/Workshop';
 import Journal from '@/components/Journal';
 import Contact from '@/components/Contact';
-import Footer from '@/components/Footer';
 import BackToTopButton from '@/components/BackToTopButton';
 
 export default function Home() {
@@ -41,7 +40,6 @@ export default function Home() {
         <Contact />
       </main>
       <BackToTopButton />
-      <Footer />
     </div>
   );
 }
