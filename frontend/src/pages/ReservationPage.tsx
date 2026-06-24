@@ -234,6 +234,7 @@ export default function ReservationPage() {
   const todayKey = getLocalDateKey(new Date());
   const todayDate = startOfDay(new Date());
   const selectedReservationDate = parseLocalDate(reservationDate);
+  const isSelectedDatePast = selectedDateKey ? selectedDateKey < todayKey : false;
   const selectedReservations = selectedDateKey
     ? (reservationsByDate[selectedDateKey] ?? [])
     : [];
@@ -391,15 +392,17 @@ export default function ReservationPage() {
                   const isSelected = selectedDateKey === dateKey;
                   const isToday = dateKey === todayKey;
                   const isPastDate = dateKey < todayKey;
+                  const canSelectDate =
+                    !isPastDate || dayReservations.length > 0;
                   const dayOfWeek = date.getDay();
 
                   return (
                     <button
                       key={dateKey}
                       type="button"
-                      disabled={isPastDate}
+                      disabled={!canSelectDate}
                       onClick={() => {
-                        if (isPastDate) return;
+                        if (!canSelectDate) return;
                         setSelectedDateKey((currentDateKey) =>
                           currentDateKey === dateKey ? null : dateKey
                         );
@@ -411,7 +414,7 @@ export default function ReservationPage() {
                           : isCurrentMonth
                             ? 'bg-background hover:bg-secondary/30'
                             : 'bg-muted/20 text-foreground/35 hover:bg-muted/30',
-                        isSelected && !isPastDate
+                        isSelected && canSelectDate
                           ? 'ring-2 ring-inset ring-primary'
                           : '',
                       ].join(' ')}
@@ -634,13 +637,15 @@ export default function ReservationPage() {
                         </div>
                       )}
 
-                      <button
-                        type="button"
-                        onClick={openReservationCard}
-                        className="btn-primary mt-6 w-full"
-                      >
-                        이 날짜로 예약하기
-                      </button>
+                      {!isSelectedDatePast && (
+                        <button
+                          type="button"
+                          onClick={openReservationCard}
+                          className="btn-primary mt-6 w-full"
+                        >
+                          이 날짜로 예약하기
+                        </button>
+                      )}
                     </>
                   ) : (
                     <>
