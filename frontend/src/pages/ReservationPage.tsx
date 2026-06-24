@@ -120,6 +120,31 @@ function groupReservationsByDate(reservations: ClassReservation[]) {
   );
 }
 
+function getNearestReservations(
+  reservations: ClassReservation[],
+  todayKey: string
+) {
+  const todayDate = parseLocalDate(todayKey);
+  const todayTime = todayDate?.getTime() ?? Date.now();
+
+  return [...reservations]
+    .sort((left, right) => {
+      const leftDate = parseLocalDate(left.preferred_date);
+      const rightDate = parseLocalDate(right.preferred_date);
+      const leftDiff = leftDate
+        ? Math.abs(leftDate.getTime() - todayTime)
+        : Number.POSITIVE_INFINITY;
+      const rightDiff = rightDate
+        ? Math.abs(rightDate.getTime() - todayTime)
+        : Number.POSITIVE_INFINITY;
+
+      if (leftDiff !== rightDiff) return leftDiff - rightDiff;
+
+      return left.preferred_date.localeCompare(right.preferred_date);
+    })
+    .slice(0, 4);
+}
+
 function getInitialCalendarMonth(reservations: ClassReservation[]) {
   const upcomingReservation = reservations.find((reservation) => {
     const reservationDate = parseLocalDate(reservation.preferred_date);
@@ -140,14 +165,14 @@ export default function ReservationPage() {
   const [reservations, setReservations] = useState<ClassReservation[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
-  const [selectedDateKey, setSelectedDateKey] = useState(() =>
-    getLocalDateKey(new Date())
-  );
+  const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [isReservationCardOpen, setIsReservationCardOpen] = useState(false);
   const [reservationClassName, setReservationClassName] = useState(
     classOptions[0]
   );
-  const [reservationDate, setReservationDate] = useState(selectedDateKey);
+  const [reservationDate, setReservationDate] = useState(() =>
+    getLocalDateKey(new Date())
+  );
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [reservationNote, setReservationNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -193,11 +218,7 @@ export default function ReservationPage() {
   useEffect(() => {
     if (reservations.length === 0) return;
 
-    const initialMonth = getInitialCalendarMonth(reservations);
-    const initialDateKey = getLocalDateKey(initialMonth);
-
-    setCalendarMonth(initialMonth);
-    setSelectedDateKey(initialDateKey);
+    setCalendarMonth(getInitialCalendarMonth(reservations));
   }, [reservations]);
 
   const calendarDays = useMemo(
@@ -210,10 +231,16 @@ export default function ReservationPage() {
     [reservations]
   );
 
-  const selectedReservations = reservationsByDate[selectedDateKey] ?? [];
   const todayKey = getLocalDateKey(new Date());
   const todayDate = startOfDay(new Date());
   const selectedReservationDate = parseLocalDate(reservationDate);
+  const selectedReservations = selectedDateKey
+    ? (reservationsByDate[selectedDateKey] ?? [])
+    : [];
+  const nearestReservations = useMemo(
+    () => getNearestReservations(reservations, todayKey),
+    [reservations, todayKey]
+  );
 
   const moveCalendarMonth = (amount: number) => {
     setCalendarMonth(
@@ -223,7 +250,7 @@ export default function ReservationPage() {
   };
 
   const openReservationCard = () => {
-    setReservationDate(selectedDateKey);
+    setReservationDate(selectedDateKey ?? todayKey);
     setReservationClassName(classOptions[0]);
     setReservationNote('');
     setIsReservationCardOpen(true);
@@ -380,8 +407,8 @@ export default function ReservationPage() {
                         isPastDate
                           ? 'cursor-not-allowed bg-muted/20 text-foreground/30 opacity-55'
                           : isCurrentMonth
-                          ? 'bg-background hover:bg-secondary/30'
-                          : 'bg-muted/20 text-foreground/35 hover:bg-muted/30',
+                            ? 'bg-background hover:bg-secondary/30'
+                            : 'bg-muted/20 text-foreground/35 hover:bg-muted/30',
                         isSelected && !isPastDate
                           ? 'ring-2 ring-inset ring-primary'
                           : '',
@@ -568,48 +595,96 @@ export default function ReservationPage() {
                   <p className="mb-2 text-xs uppercase tracking-[0.16em] text-accent">
                     Selected Date
                   </p>
-                  <h2 className="mb-5 text-xl font-semibold text-foreground">
-                    {formatDisplayDate(selectedDateKey)}
-                  </h2>
+                  {selectedDateKey ? (
+                    <>
+                      <h2 className="mb-5 text-xl font-semibold text-foreground">
+                        {formatDisplayDate(selectedDateKey)}
+                      </h2>
 
-                  {selectedReservations.length === 0 ? (
-                    <p className="text-sm text-foreground/55">
-                      선택한 날짜에는 예약이 없습니다.
-                    </p>
-                  ) : (
-                    <div className="space-y-4">
-                      {selectedReservations.map((reservation) => (
-                        <article
-                          key={reservation.id}
-                          className="border border-foreground/10 p-4"
-                        >
-                          <div className="mb-3 flex items-start justify-between gap-3">
-                            <h3 className="text-base font-semibold text-foreground">
-                              {reservation.class_name}
-                            </h3>
-                            <span
-                              className={`shrink-0 border px-2 py-1 text-xs ${statusClassNames[reservation.status]}`}
+                      {selectedReservations.length === 0 ? (
+                        <p className="text-sm text-foreground/55">
+                          선택한 날짜에는 예약이 없습니다.
+                        </p>
+                      ) : (
+                        <div className="space-y-4">
+                          {selectedReservations.map((reservation) => (
+                            <article
+                              key={reservation.id}
+                              className="border border-foreground/10 p-4"
                             >
-                              {statusLabels[reservation.status]}
-                            </span>
-                          </div>
-                          {reservation.note && (
-                            <p className="text-sm leading-relaxed text-foreground/70">
-                              {reservation.note}
-                            </p>
-                          )}
-                        </article>
-                      ))}
-                    </div>
-                  )}
+                              <div className="mb-3 flex items-start justify-between gap-3">
+                                <h3 className="text-base font-semibold text-foreground">
+                                  {reservation.class_name}
+                                </h3>
+                                <span
+                                  className={`shrink-0 border px-2 py-1 text-xs ${statusClassNames[reservation.status]}`}
+                                >
+                                  {statusLabels[reservation.status]}
+                                </span>
+                              </div>
+                              {reservation.note && (
+                                <p className="text-sm leading-relaxed text-foreground/70">
+                                  {reservation.note}
+                                </p>
+                              )}
+                            </article>
+                          ))}
+                        </div>
+                      )}
 
-                  <button
-                    type="button"
-                    onClick={openReservationCard}
-                    className="btn-primary mt-6 w-full"
-                  >
-                    이 날짜로 예약하기
-                  </button>
+                      <button
+                        type="button"
+                        onClick={openReservationCard}
+                        className="btn-primary mt-6 w-full"
+                      >
+                        이 날짜로 예약하기
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <h2 className="mb-3 text-xl font-semibold text-foreground">
+                        가까운 예약
+                      </h2>
+                      <p className="mb-5 text-sm text-foreground/55">
+                        날짜를 선택하면 해당 날짜의 예약 내역과 예약 버튼이
+                        표시됩니다.
+                      </p>
+
+                      {nearestReservations.length === 0 ? (
+                        <p className="text-sm text-foreground/55">
+                          아직 예약 내역이 없습니다.
+                        </p>
+                      ) : (
+                        <div className="space-y-4">
+                          {nearestReservations.map((reservation) => (
+                            <article
+                              key={reservation.id}
+                              className="border border-foreground/10 p-4"
+                            >
+                              <div className="mb-2 flex items-start justify-between gap-3">
+                                <h3 className="text-base font-semibold text-foreground">
+                                  {reservation.class_name}
+                                </h3>
+                                <span
+                                  className={`shrink-0 border px-2 py-1 text-xs ${statusClassNames[reservation.status]}`}
+                                >
+                                  {statusLabels[reservation.status]}
+                                </span>
+                              </div>
+                              <p className="text-sm text-foreground/60">
+                                {formatDisplayDate(reservation.preferred_date)}
+                              </p>
+                              {reservation.note && (
+                                <p className="mt-3 text-sm leading-relaxed text-foreground/70">
+                                  {reservation.note}
+                                </p>
+                              )}
+                            </article>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
                 </section>
               )}
             </aside>
