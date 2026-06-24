@@ -452,8 +452,8 @@ export default function ReservationPage() {
                           </div>
                         ))}
                         {dayReservations.length > 2 && (
-                          <div className="text-xs text-foreground/45">
-                            +{dayReservations.length - 2}개 더보기
+                          <div className="absolute bottom-2 right-2 text-xs text-foreground/45">
+                            +{dayReservations.length - 2}
                           </div>
                         )}
                       </div>
