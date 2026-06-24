@@ -1,5 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { CalendarDays, ChevronLeft, ChevronRight, X } from 'lucide-react';
+import {
+  CalendarDays,
+  ChevronDown,
+  ChevronLeft,
+  ChevronRight,
+  X,
+} from 'lucide-react';
 import { useLocation } from 'wouter';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
@@ -176,6 +182,9 @@ export default function ReservationPage() {
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [reservationNote, setReservationNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [expandedReservationIds, setExpandedReservationIds] = useState<
+    string[]
+  >([]);
 
   const loadReservations = useCallback(async () => {
     if (!user || !supabase || !isSupabaseConfigured) {
@@ -260,6 +269,14 @@ export default function ReservationPage() {
   const closeReservationCard = () => {
     setIsReservationCardOpen(false);
     setDatePickerOpen(false);
+  };
+
+  const toggleReservationText = (reservationId: string) => {
+    setExpandedReservationIds((currentIds) =>
+      currentIds.includes(reservationId)
+        ? currentIds.filter((id) => id !== reservationId)
+        : [...currentIds, reservationId]
+    );
   };
 
   const handleReservationSubmit = async (event: React.FormEvent) => {
@@ -628,9 +645,43 @@ export default function ReservationPage() {
                                 </span>
                               </div>
                               {reservation.note && (
-                                <p className="text-sm leading-relaxed text-foreground/70">
-                                  {reservation.note}
-                                </p>
+                                <div className="flex items-start gap-2">
+                                  <p
+                                    className={`min-w-0 flex-1 text-sm text-foreground/70 ${
+                                      expandedReservationIds.includes(
+                                        reservation.id
+                                      )
+                                        ? 'leading-relaxed'
+                                        : 'truncate'
+                                    }`}
+                                  >
+                                    {reservation.note}
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      toggleReservationText(reservation.id)
+                                    }
+                                    className="grid size-7 shrink-0 place-items-center border border-foreground/10 text-foreground/55 transition-colors hover:bg-foreground/5 hover:text-foreground"
+                                    aria-label={
+                                      expandedReservationIds.includes(
+                                        reservation.id
+                                      )
+                                        ? '요청사항 접기'
+                                        : '요청사항 펼치기'
+                                    }
+                                  >
+                                    <ChevronDown
+                                      className={`size-4 transition-transform ${
+                                        expandedReservationIds.includes(
+                                          reservation.id
+                                        )
+                                          ? 'rotate-180'
+                                          : ''
+                                      }`}
+                                    />
+                                  </button>
+                                </div>
                               )}
                             </article>
                           ))}
@@ -682,9 +733,43 @@ export default function ReservationPage() {
                                 {formatDisplayDate(reservation.preferred_date)}
                               </p>
                               {reservation.note && (
-                                <p className="mt-3 text-sm leading-relaxed text-foreground/70">
-                                  {reservation.note}
-                                </p>
+                                <div className="mt-3 flex items-start gap-2">
+                                  <p
+                                    className={`min-w-0 flex-1 text-sm text-foreground/70 ${
+                                      expandedReservationIds.includes(
+                                        reservation.id
+                                      )
+                                        ? 'leading-relaxed'
+                                        : 'truncate'
+                                    }`}
+                                  >
+                                    {reservation.note}
+                                  </p>
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      toggleReservationText(reservation.id)
+                                    }
+                                    className="grid size-7 shrink-0 place-items-center border border-foreground/10 text-foreground/55 transition-colors hover:bg-foreground/5 hover:text-foreground"
+                                    aria-label={
+                                      expandedReservationIds.includes(
+                                        reservation.id
+                                      )
+                                        ? '요청사항 접기'
+                                        : '요청사항 펼치기'
+                                    }
+                                  >
+                                    <ChevronDown
+                                      className={`size-4 transition-transform ${
+                                        expandedReservationIds.includes(
+                                          reservation.id
+                                        )
+                                          ? 'rotate-180'
+                                          : ''
+                                      }`}
+                                    />
+                                  </button>
+                                </div>
                               )}
                             </article>
                           ))}
