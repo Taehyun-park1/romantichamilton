@@ -129,12 +129,9 @@ function getInitialCalendarMonth(reservations: ClassReservation[]) {
       : false;
   });
 
-  const firstReservation = upcomingReservation ?? reservations[0];
-  const firstReservationDate = firstReservation
-    ? parseLocalDate(firstReservation.preferred_date)
-    : undefined;
-
-  return firstReservationDate ?? new Date();
+  return upcomingReservation
+    ? parseLocalDate(upcomingReservation.preferred_date) ?? new Date()
+    : new Date();
 }
 
 export default function ReservationPage() {
@@ -366,19 +363,28 @@ export default function ReservationPage() {
                   const dayReservations = reservationsByDate[dateKey] ?? [];
                   const isSelected = selectedDateKey === dateKey;
                   const isToday = dateKey === todayKey;
+                  const isPastDate = dateKey < todayKey;
                   const dayOfWeek = date.getDay();
 
                   return (
                     <button
                       key={dateKey}
                       type="button"
-                      onClick={() => setSelectedDateKey(dateKey)}
+                      disabled={isPastDate}
+                      onClick={() => {
+                        if (isPastDate) return;
+                        setSelectedDateKey(dateKey);
+                      }}
                       className={[
                         'min-h-28 border-b border-r border-foreground/10 p-2 text-left transition-colors last:border-r-0 md:min-h-32',
-                        isCurrentMonth
+                        isPastDate
+                          ? 'cursor-not-allowed bg-muted/20 text-foreground/30 opacity-55'
+                          : isCurrentMonth
                           ? 'bg-background hover:bg-secondary/30'
                           : 'bg-muted/20 text-foreground/35 hover:bg-muted/30',
-                        isSelected ? 'ring-2 ring-inset ring-primary' : '',
+                        isSelected && !isPastDate
+                          ? 'ring-2 ring-inset ring-primary'
+                          : '',
                       ].join(' ')}
                     >
                       <div className="mb-2 flex items-center justify-between gap-2">
