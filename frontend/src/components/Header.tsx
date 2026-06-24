@@ -9,6 +9,7 @@ const menuItems = [
   { label: '맞춤 제작', href: '#custom' },
   { label: '클래스', href: '#workshop' },
   { label: '사진', href: '#journal' },
+  { label: '리뷰', href: '#reviews' },
   { label: '문의', href: '#contact' },
 ];
 

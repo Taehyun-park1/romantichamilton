@@ -26,8 +26,21 @@ create table if not exists public.class_reservations (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.workshop_reviews (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid not null references auth.users(id) on delete cascade,
+  display_name text not null,
+  rating integer not null check (rating between 1 and 5),
+  title text not null check (char_length(title) between 2 and 80),
+  content text not null check (char_length(content) between 10 and 1000),
+  status text not null default 'pending' check (status in ('pending', 'approved', 'hidden')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table public.profiles enable row level security;
 alter table public.class_reservations enable row level security;
+alter table public.workshop_reviews enable row level security;
 
 create or replace function public.is_admin()
 returns boolean
@@ -105,5 +118,31 @@ drop policy if exists "class_reservations_admin_update" on public.class_reservat
 create policy "class_reservations_admin_update"
 on public.class_reservations
 for update
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "workshop_reviews_select_approved_own_or_admin" on public.workshop_reviews;
+create policy "workshop_reviews_select_approved_own_or_admin"
+on public.workshop_reviews
+for select
+using (status = 'approved' or auth.uid() = user_id or public.is_admin());
+
+drop policy if exists "workshop_reviews_insert_own" on public.workshop_reviews;
+create policy "workshop_reviews_insert_own"
+on public.workshop_reviews
+for insert
+with check (auth.uid() = user_id and status = 'pending');
+
+drop policy if exists "workshop_reviews_update_own_pending" on public.workshop_reviews;
+create policy "workshop_reviews_update_own_pending"
+on public.workshop_reviews
+for update
+using (auth.uid() = user_id and status = 'pending')
+with check (auth.uid() = user_id and status = 'pending');
+
+drop policy if exists "workshop_reviews_admin_all" on public.workshop_reviews;
+create policy "workshop_reviews_admin_all"
+on public.workshop_reviews
+for all
 using (public.is_admin())
 with check (public.is_admin());

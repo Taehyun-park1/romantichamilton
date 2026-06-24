@@ -40,3 +40,15 @@ export interface ClassReservation {
   status: 'pending' | 'confirmed' | 'cancelled';
   created_at: string;
 }
+
+export interface WorkshopReview {
+  id: string;
+  user_id: string;
+  display_name: string;
+  rating: number;
+  title: string;
+  content: string;
+  status: 'pending' | 'approved' | 'hidden';
+  created_at: string;
+  updated_at?: string;
+}

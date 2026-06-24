@@ -6,6 +6,7 @@ import BrandStory from '@/components/BrandStory';
 import CustomOrder from '@/components/CustomOrder';
 import Workshop from '@/components/Workshop';
 import Journal from '@/components/Journal';
+import Reviews from '@/components/Reviews';
 import Contact from '@/components/Contact';
 import BackToTopButton from '@/components/BackToTopButton';
 
@@ -37,6 +38,7 @@ export default function Home() {
         <CustomOrder />
         <Workshop />
         <Journal />
+        <Reviews />
         <Contact />
       </main>
       <BackToTopButton />
