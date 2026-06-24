@@ -45,52 +45,62 @@ export default function Header() {
   const handleSignOut = async () => {
     await signOut();
     setIsMenuOpen(false);
+    navigate('/');
   };
 
   const authLinks = isAuthenticated ? (
     <>
-      <Link href="/my" className="text-xs md:text-sm text-foreground/60 hover:text-foreground transition-colors">
-        마이페이지
+      <Link
+        href="/reserve"
+        className="text-xs text-foreground/60 transition-colors hover:text-foreground md:text-sm"
+      >
+        예약
       </Link>
       {isAdmin && (
-        <Link href="/admin" className="text-xs md:text-sm text-foreground/60 hover:text-foreground transition-colors">
+        <Link
+          href="/admin"
+          className="text-xs text-foreground/60 transition-colors hover:text-foreground md:text-sm"
+        >
           관리자
         </Link>
       )}
       <button
         type="button"
         onClick={handleSignOut}
-        className="text-xs md:text-sm text-foreground/60 hover:text-foreground transition-colors"
+        className="text-xs text-foreground/60 transition-colors hover:text-foreground md:text-sm"
       >
         로그아웃
       </button>
     </>
   ) : (
-    <Link href="/auth" className="text-xs md:text-sm text-foreground/60 hover:text-foreground transition-colors">
+    <Link
+      href="/auth"
+      className="text-xs text-foreground/60 transition-colors hover:text-foreground md:text-sm"
+    >
       로그인
     </Link>
   );
 
   return (
-    <header className="fixed top-0 left-0 right-0 bg-background/90 backdrop-blur-sm border-b border-border z-50">
+    <header className="fixed left-0 right-0 top-0 z-50 border-b border-border bg-background/90 backdrop-blur-sm">
       <div className="container">
-        <div className="flex items-center justify-between h-16 md:h-20">
+        <div className="flex h-16 items-center justify-between md:h-20">
           <a
             href="#top"
             onClick={handleLogoClick}
-            className="text-base md:text-lg font-semibold text-foreground"
+            className="text-base font-semibold text-foreground md:text-lg"
           >
             Romantic Hamilton
           </a>
 
-          <div className="hidden md:flex items-center gap-8">
+          <div className="hidden items-center gap-8 md:flex">
             <nav className="flex items-center gap-7">
               {menuItems.map((item) => (
                 <button
                   key={item.label}
                   type="button"
                   onClick={() => handleMenuClick(item.href)}
-                  className="text-xs md:text-sm font-normal text-foreground/60 hover:text-foreground transition-colors duration-200"
+                  className="text-xs font-normal text-foreground/60 transition-colors duration-200 hover:text-foreground md:text-sm"
                 >
                   {item.label}
                 </button>
@@ -109,7 +119,7 @@ export default function Header() {
 
           <button
             type="button"
-            className="md:hidden p-1 text-foreground"
+            className="p-1 text-foreground md:hidden"
             onClick={() => setIsMenuOpen((open) => !open)}
             aria-label="메뉴 열기"
             aria-expanded={isMenuOpen}
@@ -119,26 +129,34 @@ export default function Header() {
         </div>
 
         {isMenuOpen && (
-          <nav className="md:hidden border-t border-border bg-background">
-            <div className="py-4 space-y-3">
+          <nav className="border-t border-border bg-background md:hidden">
+            <div className="space-y-3 py-4">
               {menuItems.map((item) => (
                 <button
                   key={item.label}
                   type="button"
                   onClick={() => handleMenuClick(item.href)}
-                  className="block w-full text-left text-sm font-normal text-foreground/60 hover:text-foreground transition-colors py-2"
+                  className="block w-full py-2 text-left text-sm font-normal text-foreground/60 transition-colors hover:text-foreground"
                 >
                   {item.label}
                 </button>
               ))}
-              <div className="border-t border-foreground/10 pt-3 space-y-3">
+              <div className="space-y-3 border-t border-foreground/10 pt-3">
                 {isAuthenticated ? (
                   <>
-                    <Link href="/my" className="block text-sm text-foreground/60">
-                      마이페이지
+                    <Link
+                      href="/reserve"
+                      className="block text-sm text-foreground/60"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      예약
                     </Link>
                     {isAdmin && (
-                      <Link href="/admin" className="block text-sm text-foreground/60">
+                      <Link
+                        href="/admin"
+                        className="block text-sm text-foreground/60"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
                         관리자
                       </Link>
                     )}
@@ -151,7 +169,11 @@ export default function Header() {
                     </button>
                   </>
                 ) : (
-                  <Link href="/auth" className="block text-sm text-foreground/60">
+                  <Link
+                    href="/auth"
+                    className="block text-sm text-foreground/60"
+                    onClick={() => setIsMenuOpen(false)}
+                  >
                     로그인
                   </Link>
                 )}

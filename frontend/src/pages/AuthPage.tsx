@@ -26,7 +26,7 @@ export default function AuthPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate('/my');
+      navigate('/reserve');
     }
   }, [isAuthenticated, navigate]);
 
@@ -64,7 +64,7 @@ export default function AuthPage() {
 
         if (error) throw error;
         toast.success('회원가입이 완료되었습니다. 이메일 확인이 필요한 경우 메일을 확인해 주세요.');
-        navigate('/my');
+        navigate('/reserve');
         return;
       }
 
@@ -75,7 +75,7 @@ export default function AuthPage() {
 
       if (error) throw error;
       toast.success('로그인되었습니다.');
-      navigate('/my');
+      navigate('/reserve');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : '인증 처리 중 오류가 발생했습니다.');
     } finally {
@@ -92,7 +92,7 @@ export default function AuthPage() {
     const { error } = await supabase.auth.signInWithOAuth({
       provider: 'kakao',
       options: {
-        redirectTo: `${window.location.origin}/my`,
+        redirectTo: `${window.location.origin}/reserve`,
         queryParams: {
           scope: 'profile_nickname profile_image',
         },

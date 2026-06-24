@@ -9,6 +9,7 @@ import AdminDashboard from "./pages/AdminDashboard";
 import AuthPage from "./pages/AuthPage";
 import Home from "./pages/Home";
 import MyPage from "./pages/MyPage";
+import ReservationPage from "./pages/ReservationPage";
 
 
 function Router() {
@@ -16,6 +17,7 @@ function Router() {
     <Switch>
       <Route path={"/"} component={Home} />
       <Route path={"/auth"} component={AuthPage} />
+      <Route path={"/reserve"} component={ReservationPage} />
       <Route path={"/my"} component={MyPage} />
       <Route path={"/admin"} component={AdminDashboard} />
       <Route path={"/admin/:rest*"} component={AdminDashboard} />
