@@ -441,7 +441,7 @@ export default function ReservationPage() {
                         )}
                       </div>
 
-                      <div className="space-y-1">
+                      <div className="space-y-1 pb-5">
                         {dayReservations.slice(0, 2).map((reservation) => (
                           <div
                             key={reservation.id}
