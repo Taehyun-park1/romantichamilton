@@ -405,7 +405,7 @@ export default function ReservationPage() {
                         );
                       }}
                       className={[
-                        'min-h-28 border-b border-r border-foreground/10 p-2 text-left transition-colors last:border-r-0 md:min-h-32',
+                        'relative min-h-28 border-b border-r border-foreground/10 p-2 pt-11 text-left transition-colors last:border-r-0 md:min-h-32',
                         isPastDate
                           ? 'bg-muted/20 text-foreground/30 opacity-55'
                           : isCurrentMonth
@@ -416,7 +416,7 @@ export default function ReservationPage() {
                           : '',
                       ].join(' ')}
                     >
-                      <div className="mb-2 flex items-center justify-between gap-2">
+                      <div className="absolute inset-x-2 top-2 flex items-center justify-between gap-2">
                         <span
                           className={[
                             'flex size-7 items-center justify-center text-sm',
