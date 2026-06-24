@@ -299,7 +299,14 @@ export default function MyPage() {
                   {WEEKDAYS.map((weekday) => (
                     <div
                       key={weekday}
-                      className="px-2 py-3 text-center text-xs font-medium text-foreground/60"
+                      className={[
+                        'px-2 py-3 text-center text-xs font-medium',
+                        weekday === '일'
+                          ? 'text-rose-700/70'
+                          : weekday === '토'
+                            ? 'text-sky-700/70'
+                            : 'text-foreground/60',
+                      ].join(' ')}
                     >
                       {weekday}
                     </div>
@@ -312,6 +319,7 @@ export default function MyPage() {
                     const dayReservations = reservationsByDate[dateKey] ?? [];
                     const isSelected = selectedDateKey === dateKey;
                     const isToday = dateKey === getLocalDateKey(new Date());
+                    const dayOfWeek = date.getDay();
 
                     return (
                       <button
@@ -331,8 +339,12 @@ export default function MyPage() {
                             className={[
                               'flex size-7 items-center justify-center text-sm',
                               isToday
-                                ? 'bg-primary text-primary-foreground'
-                                : 'text-foreground/70',
+                                ? 'border border-accent/55 text-foreground'
+                                : dayOfWeek === 0
+                                  ? 'text-rose-700/70'
+                                  : dayOfWeek === 6
+                                    ? 'text-sky-700/70'
+                                    : 'text-foreground/70',
                             ].join(' ')}
                           >
                             {date.getDate()}

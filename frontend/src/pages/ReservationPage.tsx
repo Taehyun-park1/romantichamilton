@@ -182,6 +182,16 @@ export default function ReservationPage() {
                     selected={selectedPreferredDate}
                     defaultMonth={selectedPreferredDate ?? todayDate}
                     disabled={(date) => startOfDay(date) < todayDate}
+                    modifiers={{
+                      saturday: (date) => date.getDay() === 6,
+                      sunday: (date) => date.getDay() === 0,
+                    }}
+                    modifiersClassNames={{
+                      saturday:
+                        '[&:not([data-selected-single=true])]:text-sky-700/70',
+                      sunday:
+                        '[&:not([data-selected-single=true])]:text-rose-700/70',
+                    }}
                     onSelect={(date) => {
                       if (!date) return;
 
