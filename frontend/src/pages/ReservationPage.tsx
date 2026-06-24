@@ -400,12 +400,14 @@ export default function ReservationPage() {
                       disabled={isPastDate}
                       onClick={() => {
                         if (isPastDate) return;
-                        setSelectedDateKey(dateKey);
+                        setSelectedDateKey((currentDateKey) =>
+                          currentDateKey === dateKey ? null : dateKey
+                        );
                       }}
                       className={[
                         'min-h-28 border-b border-r border-foreground/10 p-2 text-left transition-colors last:border-r-0 md:min-h-32',
                         isPastDate
-                          ? 'cursor-not-allowed bg-muted/20 text-foreground/30 opacity-55'
+                          ? 'bg-muted/20 text-foreground/30 opacity-55'
                           : isCurrentMonth
                             ? 'bg-background hover:bg-secondary/30'
                             : 'bg-muted/20 text-foreground/35 hover:bg-muted/30',
