@@ -247,6 +247,8 @@ export default function ReservationPage() {
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
   const [isReservationCardOpen, setIsReservationCardOpen] = useState(false);
+  const [reviewReservation, setReviewReservation] =
+    useState<ClassReservation | null>(null);
   const [reservationClassName, setReservationClassName] = useState(
     classOptions[0]
   );
@@ -255,7 +257,11 @@ export default function ReservationPage() {
   );
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [reservationNote, setReservationNote] = useState('');
+  const [reviewRating, setReviewRating] = useState(5);
+  const [reviewTitle, setReviewTitle] = useState('');
+  const [reviewContent, setReviewContent] = useState('');
   const [submitting, setSubmitting] = useState(false);
+  const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [expandedReservationIds, setExpandedReservationIds] = useState<
     string[]
   >([]);
@@ -325,6 +331,9 @@ export default function ReservationPage() {
     () => getNearestReservations(reservations, todayKey),
     [reservations, todayKey]
   );
+  const displayName =
+    profile?.display_name || user?.user_metadata?.name || '소셜 로그인 사용자';
+  const accountLabel = profile?.email || user?.email || user?.id.slice(0, 8);
 
   const moveCalendarMonth = (amount: number) => {
     setCalendarMonth(
@@ -334,25 +343,34 @@ export default function ReservationPage() {
   };
 
   const openReservationCard = () => {
+    setReviewReservation(null);
     setReservationDate(selectedDateKey ?? todayKey);
     setReservationClassName(classOptions[0]);
     setReservationNote('');
     setIsReservationCardOpen(true);
   };
 
-  const openReservationFromPastCard = (reservation: ClassReservation) => {
+  const openReviewCard = (reservation: ClassReservation) => {
     if (reservation.preferred_date >= todayKey) return;
 
-    setReservationDate(todayKey);
-    setReservationClassName(reservation.class_name);
-    setReservationNote('');
-    setIsReservationCardOpen(true);
+    setIsReservationCardOpen(false);
+    setReviewReservation(reservation);
+    setReviewRating(5);
+    setReviewTitle(`${reservation.class_name} 후기`);
+    setReviewContent('');
     setDatePickerOpen(false);
   };
 
   const closeReservationCard = () => {
     setIsReservationCardOpen(false);
     setDatePickerOpen(false);
+  };
+
+  const closeReviewCard = () => {
+    setReviewReservation(null);
+    setReviewRating(5);
+    setReviewTitle('');
+    setReviewContent('');
   };
 
   const toggleReservationText = (reservationId: string) => {
@@ -411,6 +429,43 @@ export default function ReservationPage() {
     await loadReservations();
   };
 
+  const handleReviewSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!user || !reviewReservation) return;
+
+    if (!supabase || !isSupabaseConfigured) {
+      toast.error('Supabase 환경변수가 설정되지 않았습니다.');
+      return;
+    }
+
+    if (reviewTitle.trim().length < 2 || reviewContent.trim().length < 10) {
+      toast.error('제목은 2자 이상, 내용은 10자 이상 입력해 주세요.');
+      return;
+    }
+
+    setReviewSubmitting(true);
+
+    const { error } = await supabase.from('workshop_reviews').insert({
+      user_id: user.id,
+      display_name: displayName,
+      rating: reviewRating,
+      title: reviewTitle.trim(),
+      content: reviewContent.trim(),
+      status: 'pending',
+    });
+
+    setReviewSubmitting(false);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success('리뷰가 접수되었습니다. 확인 후 게시됩니다.');
+    closeReviewCard();
+  };
+
   if (loading || dataLoading) {
     return (
       <main className="min-h-screen bg-background pt-28">
@@ -422,10 +477,6 @@ export default function ReservationPage() {
   }
 
   if (!user) return null;
-
-  const displayName =
-    profile?.display_name || user.user_metadata?.name || '소셜 로그인 사용자';
-  const accountLabel = profile?.email || user.email || user.id.slice(0, 8);
 
   return (
     <>
@@ -696,6 +747,106 @@ export default function ReservationPage() {
                     </button>
                   </form>
                 </section>
+              ) : reviewReservation ? (
+                <section>
+                  <div className="mb-6 flex items-start justify-between gap-4">
+                    <div>
+                      <p className="mb-2 text-xs uppercase tracking-[0.16em] text-accent">
+                        Review
+                      </p>
+                      <h2 className="text-2xl font-semibold text-foreground">
+                        리뷰 남기기
+                      </h2>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={closeReviewCard}
+                      className="grid size-9 place-items-center border border-foreground/10 text-foreground/60 transition-colors hover:bg-foreground/5 hover:text-foreground"
+                      aria-label="리뷰 카드 닫기"
+                    >
+                      <X className="size-4" />
+                    </button>
+                  </div>
+
+                  <div className="mb-6 border border-foreground/10 p-4">
+                    <p className="text-base font-semibold text-foreground">
+                      {reviewReservation.class_name}
+                    </p>
+                    <p className="mt-1 text-sm text-foreground/60">
+                      {formatDisplayDate(reviewReservation.preferred_date)}
+                    </p>
+                  </div>
+
+                  <form onSubmit={handleReviewSubmit} className="space-y-6">
+                    <div>
+                      <label
+                        htmlFor="reviewRating"
+                        className="mb-2 block text-sm text-foreground/60"
+                      >
+                        평점
+                      </label>
+                      <select
+                        id="reviewRating"
+                        value={reviewRating}
+                        onChange={(event) =>
+                          setReviewRating(Number(event.target.value))
+                        }
+                        className="w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground"
+                      >
+                        {[5, 4, 3, 2, 1].map((score) => (
+                          <option key={score} value={score}>
+                            {score}점
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="reviewTitle"
+                        className="mb-2 block text-sm text-foreground/60"
+                      >
+                        제목
+                      </label>
+                      <input
+                        id="reviewTitle"
+                        value={reviewTitle}
+                        onChange={(event) => setReviewTitle(event.target.value)}
+                        maxLength={80}
+                        className="w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground"
+                        placeholder="후기를 한 줄로 적어 주세요."
+                      />
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="reviewContent"
+                        className="mb-2 block text-sm text-foreground/60"
+                      >
+                        내용
+                      </label>
+                      <textarea
+                        id="reviewContent"
+                        value={reviewContent}
+                        onChange={(event) =>
+                          setReviewContent(event.target.value)
+                        }
+                        rows={5}
+                        maxLength={1000}
+                        className="w-full resize-none border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground"
+                        placeholder="클래스 경험을 남겨 주세요."
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={reviewSubmitting}
+                      className="btn-primary w-full"
+                    >
+                      {reviewSubmitting ? '접수 중' : '리뷰 등록'}
+                    </button>
+                  </form>
+                </section>
               ) : (
                 <section>
                   <p className="mb-2 text-xs uppercase tracking-[0.16em] text-accent">
@@ -716,9 +867,7 @@ export default function ReservationPage() {
                           {selectedReservations.map((reservation) => (
                             <article
                               key={reservation.id}
-                              onClick={() =>
-                                openReservationFromPastCard(reservation)
-                              }
+                              onClick={() => openReviewCard(reservation)}
                               onKeyDown={(event) => {
                                 if (
                                   reservation.preferred_date >= todayKey ||
@@ -728,7 +877,7 @@ export default function ReservationPage() {
                                 }
 
                                 event.preventDefault();
-                                openReservationFromPastCard(reservation);
+                                openReviewCard(reservation);
                               }}
                               role={
                                 reservation.preferred_date < todayKey
