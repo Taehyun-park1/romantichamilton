@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import {
   CalendarDays,
   ChevronDown,
@@ -165,6 +165,80 @@ function getInitialCalendarMonth(reservations: ClassReservation[]) {
     : new Date();
 }
 
+function ReservationNoteDisclosure({
+  note,
+  expanded,
+  onToggle,
+  className,
+}: {
+  note: string;
+  expanded: boolean;
+  onToggle: () => void;
+  className?: string;
+}) {
+  const textRef = useRef<HTMLParagraphElement>(null);
+  const [canExpand, setCanExpand] = useState(false);
+
+  useEffect(() => {
+    const textElement = textRef.current;
+    if (!textElement) return;
+
+    const measureOverflow = () => {
+      const previousWhiteSpace = textElement.style.whiteSpace;
+      const previousOverflow = textElement.style.overflow;
+      const previousTextOverflow = textElement.style.textOverflow;
+
+      textElement.style.whiteSpace = 'nowrap';
+      textElement.style.overflow = 'hidden';
+      textElement.style.textOverflow = 'ellipsis';
+      setCanExpand(textElement.scrollWidth > textElement.clientWidth + 1);
+
+      textElement.style.whiteSpace = previousWhiteSpace;
+      textElement.style.overflow = previousOverflow;
+      textElement.style.textOverflow = previousTextOverflow;
+    };
+
+    measureOverflow();
+
+    const resizeObserver = new ResizeObserver(measureOverflow);
+    resizeObserver.observe(textElement);
+
+    return () => {
+      resizeObserver.disconnect();
+    };
+  }, [note]);
+
+  return (
+    <div className={`flex items-start gap-2 ${className ?? ''}`}>
+      <p
+        ref={textRef}
+        className={`min-w-0 flex-1 text-sm text-foreground/70 ${
+          expanded ? 'leading-relaxed' : 'truncate'
+        }`}
+      >
+        {note}
+      </p>
+      {canExpand && (
+        <button
+          type="button"
+          onClick={(event) => {
+            event.stopPropagation();
+            onToggle();
+          }}
+          className="grid size-7 shrink-0 place-items-center text-foreground/55 transition-colors hover:bg-foreground/5 hover:text-foreground"
+          aria-label={expanded ? '요청사항 접기' : '요청사항 펼치기'}
+        >
+          <ChevronDown
+            className={`size-4 transition-transform ${
+              expanded ? 'rotate-180' : ''
+            }`}
+          />
+        </button>
+      )}
+    </div>
+  );
+}
+
 export default function ReservationPage() {
   const [, navigate] = useLocation();
   const { user, profile, loading } = useAuth();
@@ -264,6 +338,16 @@ export default function ReservationPage() {
     setReservationClassName(classOptions[0]);
     setReservationNote('');
     setIsReservationCardOpen(true);
+  };
+
+  const openReservationFromPastCard = (reservation: ClassReservation) => {
+    if (reservation.preferred_date >= todayKey) return;
+
+    setReservationDate(todayKey);
+    setReservationClassName(reservation.class_name);
+    setReservationNote('');
+    setIsReservationCardOpen(true);
+    setDatePickerOpen(false);
   };
 
   const closeReservationCard = () => {
@@ -632,7 +716,36 @@ export default function ReservationPage() {
                           {selectedReservations.map((reservation) => (
                             <article
                               key={reservation.id}
-                              className="border border-foreground/10 p-4"
+                              onClick={() =>
+                                openReservationFromPastCard(reservation)
+                              }
+                              onKeyDown={(event) => {
+                                if (
+                                  reservation.preferred_date >= todayKey ||
+                                  (event.key !== 'Enter' && event.key !== ' ')
+                                ) {
+                                  return;
+                                }
+
+                                event.preventDefault();
+                                openReservationFromPastCard(reservation);
+                              }}
+                              role={
+                                reservation.preferred_date < todayKey
+                                  ? 'button'
+                                  : undefined
+                              }
+                              tabIndex={
+                                reservation.preferred_date < todayKey
+                                  ? 0
+                                  : undefined
+                              }
+                              className={[
+                                'border border-foreground/10 p-4',
+                                reservation.preferred_date < todayKey
+                                  ? 'transition-colors hover:bg-foreground/3'
+                                  : '',
+                              ].join(' ')}
                             >
                               <div className="mb-3 flex items-start justify-between gap-3">
                                 <h3 className="text-base font-semibold text-foreground">
@@ -645,43 +758,15 @@ export default function ReservationPage() {
                                 </span>
                               </div>
                               {reservation.note && (
-                                <div className="flex items-start gap-2">
-                                  <p
-                                    className={`min-w-0 flex-1 text-sm text-foreground/70 ${
-                                      expandedReservationIds.includes(
-                                        reservation.id
-                                      )
-                                        ? 'leading-relaxed'
-                                        : 'truncate'
-                                    }`}
-                                  >
-                                    {reservation.note}
-                                  </p>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      toggleReservationText(reservation.id)
-                                    }
-                                    className="grid size-7 shrink-0 place-items-center border border-foreground/10 text-foreground/55 transition-colors hover:bg-foreground/5 hover:text-foreground"
-                                    aria-label={
-                                      expandedReservationIds.includes(
-                                        reservation.id
-                                      )
-                                        ? '요청사항 접기'
-                                        : '요청사항 펼치기'
-                                    }
-                                  >
-                                    <ChevronDown
-                                      className={`size-4 transition-transform ${
-                                        expandedReservationIds.includes(
-                                          reservation.id
-                                        )
-                                          ? 'rotate-180'
-                                          : ''
-                                      }`}
-                                    />
-                                  </button>
-                                </div>
+                                <ReservationNoteDisclosure
+                                  note={reservation.note}
+                                  expanded={expandedReservationIds.includes(
+                                    reservation.id
+                                  )}
+                                  onToggle={() =>
+                                    toggleReservationText(reservation.id)
+                                  }
+                                />
                               )}
                             </article>
                           ))}
@@ -733,43 +818,16 @@ export default function ReservationPage() {
                                 {formatDisplayDate(reservation.preferred_date)}
                               </p>
                               {reservation.note && (
-                                <div className="mt-3 flex items-start gap-2">
-                                  <p
-                                    className={`min-w-0 flex-1 text-sm text-foreground/70 ${
-                                      expandedReservationIds.includes(
-                                        reservation.id
-                                      )
-                                        ? 'leading-relaxed'
-                                        : 'truncate'
-                                    }`}
-                                  >
-                                    {reservation.note}
-                                  </p>
-                                  <button
-                                    type="button"
-                                    onClick={() =>
-                                      toggleReservationText(reservation.id)
-                                    }
-                                    className="grid size-7 shrink-0 place-items-center border border-foreground/10 text-foreground/55 transition-colors hover:bg-foreground/5 hover:text-foreground"
-                                    aria-label={
-                                      expandedReservationIds.includes(
-                                        reservation.id
-                                      )
-                                        ? '요청사항 접기'
-                                        : '요청사항 펼치기'
-                                    }
-                                  >
-                                    <ChevronDown
-                                      className={`size-4 transition-transform ${
-                                        expandedReservationIds.includes(
-                                          reservation.id
-                                        )
-                                          ? 'rotate-180'
-                                          : ''
-                                      }`}
-                                    />
-                                  </button>
-                                </div>
+                                <ReservationNoteDisclosure
+                                  note={reservation.note}
+                                  expanded={expandedReservationIds.includes(
+                                    reservation.id
+                                  )}
+                                  onToggle={() =>
+                                    toggleReservationText(reservation.id)
+                                  }
+                                  className="mt-3"
+                                />
                               )}
                             </article>
                           ))}
