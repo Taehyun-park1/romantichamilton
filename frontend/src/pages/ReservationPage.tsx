@@ -330,7 +330,7 @@ export default function ReservationPage() {
     <>
       <Header />
       <main className="min-h-screen bg-background pt-24 md:pt-28">
-        <section className="container pb-20 pt-10 md:pb-28 md:pt-14">
+        <section className="container pb-64 pt-10 md:pt-14">
           <div className="mb-8">
             <p className="mb-3 text-xs uppercase tracking-[0.16em] text-accent">
               Reservation
