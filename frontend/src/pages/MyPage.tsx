@@ -125,7 +125,9 @@ export default function MyPage() {
   const [reservations, setReservations] = useState<ClassReservation[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
-  const [selectedDateKey, setSelectedDateKey] = useState(getLocalDateKey(new Date()));
+  const [selectedDateKey, setSelectedDateKey] = useState(() =>
+    getLocalDateKey(new Date())
+  );
 
   useEffect(() => {
     if (loading) return;
@@ -269,147 +271,141 @@ export default function MyPage() {
               </div>
             </div>
 
-            {reservations.length === 0 ? (
-              <p className="border border-foreground/10 p-6 text-sm text-foreground/55">
-                아직 예약 내역이 없습니다.
-              </p>
-            ) : (
-              <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
-                <div className="border border-foreground/10 bg-card/60">
-                  <div className="flex items-center justify-between border-b border-foreground/10 p-4">
-                    <button
-                      type="button"
-                      onClick={() => moveCalendarMonth(-1)}
-                      className="inline-flex size-10 items-center justify-center border border-foreground/10 text-foreground transition-colors hover:bg-foreground/5"
-                      aria-label="이전 달"
-                    >
-                      <ChevronLeft className="size-4" />
-                    </button>
-                    <h3 className="text-xl font-semibold text-foreground md:text-2xl">
-                      {formatMonthLabel(calendarMonth)}
-                    </h3>
-                    <button
-                      type="button"
-                      onClick={() => moveCalendarMonth(1)}
-                      className="inline-flex size-10 items-center justify-center border border-foreground/10 text-foreground transition-colors hover:bg-foreground/5"
-                      aria-label="다음 달"
-                    >
-                      <ChevronRight className="size-4" />
-                    </button>
-                  </div>
-
-                  <div className="grid grid-cols-7 border-b border-foreground/10 bg-secondary/30">
-                    {WEEKDAYS.map((weekday) => (
-                      <div
-                        key={weekday}
-                        className="px-2 py-3 text-center text-xs font-medium text-foreground/60"
-                      >
-                        {weekday}
-                      </div>
-                    ))}
-                  </div>
-
-                  <div className="grid grid-cols-7">
-                    {calendarDays.map(({ date, isCurrentMonth }) => {
-                      const dateKey = getLocalDateKey(date);
-                      const dayReservations = reservationsByDate[dateKey] ?? [];
-                      const isSelected = selectedDateKey === dateKey;
-                      const isToday = dateKey === getLocalDateKey(new Date());
-
-                      return (
-                        <button
-                          key={dateKey}
-                          type="button"
-                          onClick={() => setSelectedDateKey(dateKey)}
-                          className={[
-                            'min-h-28 border-b border-r border-foreground/10 p-2 text-left transition-colors last:border-r-0 md:min-h-32',
-                            isCurrentMonth
-                              ? 'bg-background hover:bg-secondary/30'
-                              : 'bg-muted/20 text-foreground/35 hover:bg-muted/30',
-                            isSelected ? 'ring-2 ring-inset ring-primary' : '',
-                          ].join(' ')}
-                        >
-                          <div className="mb-2 flex items-center justify-between gap-2">
-                            <span
-                              className={[
-                                'flex size-7 items-center justify-center text-sm',
-                                isToday
-                                  ? 'bg-primary text-primary-foreground'
-                                  : 'text-foreground/70',
-                              ].join(' ')}
-                            >
-                              {date.getDate()}
-                            </span>
-                            {dayReservations.length > 0 && (
-                              <span className="text-xs text-accent">
-                                {dayReservations.length}건
-                              </span>
-                            )}
-                          </div>
-
-                          <div className="space-y-1">
-                            {dayReservations.slice(0, 2).map((reservation) => (
-                              <div
-                                key={reservation.id}
-                                className={`truncate border px-2 py-1 text-xs ${statusClassNames[reservation.status]}`}
-                                title={reservation.class_name}
-                              >
-                                {reservation.class_name}
-                              </div>
-                            ))}
-                            {dayReservations.length > 2 && (
-                              <div className="text-xs text-foreground/45">
-                                +{dayReservations.length - 2}개 더보기
-                              </div>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    })}
-                  </div>
+            <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px]">
+              <div className="border border-foreground/10 bg-card/60">
+                <div className="flex items-center justify-between border-b border-foreground/10 p-4">
+                  <button
+                    type="button"
+                    onClick={() => moveCalendarMonth(-1)}
+                    className="inline-flex size-10 items-center justify-center border border-foreground/10 text-foreground transition-colors hover:bg-foreground/5"
+                    aria-label="이전 달"
+                  >
+                    <ChevronLeft className="size-4" />
+                  </button>
+                  <h3 className="text-xl font-semibold text-foreground md:text-2xl">
+                    {formatMonthLabel(calendarMonth)}
+                  </h3>
+                  <button
+                    type="button"
+                    onClick={() => moveCalendarMonth(1)}
+                    className="inline-flex size-10 items-center justify-center border border-foreground/10 text-foreground transition-colors hover:bg-foreground/5"
+                    aria-label="다음 달"
+                  >
+                    <ChevronRight className="size-4" />
+                  </button>
                 </div>
 
-                <aside className="border border-foreground/10 bg-card/60 p-5">
-                  <p className="mb-2 text-xs uppercase tracking-[0.16em] text-accent">
-                    Selected Date
-                  </p>
-                  <h3 className="mb-5 text-xl font-semibold text-foreground">
-                    {formatDisplayDate(selectedDateKey)}
-                  </h3>
-
-                  {selectedReservations.length === 0 ? (
-                    <p className="text-sm text-foreground/55">
-                      선택한 날짜에는 예약이 없습니다.
-                    </p>
-                  ) : (
-                    <div className="space-y-4">
-                      {selectedReservations.map((reservation) => (
-                        <article
-                          key={reservation.id}
-                          className="border border-foreground/10 p-4"
-                        >
-                          <div className="mb-3 flex items-start justify-between gap-3">
-                            <h4 className="text-base font-semibold text-foreground">
-                              {reservation.class_name}
-                            </h4>
-                            <span
-                              className={`shrink-0 border px-2 py-1 text-xs ${statusClassNames[reservation.status]}`}
-                            >
-                              {statusLabels[reservation.status]}
-                            </span>
-                          </div>
-                          {reservation.note && (
-                            <p className="text-sm leading-relaxed text-foreground/70">
-                              {reservation.note}
-                            </p>
-                          )}
-                        </article>
-                      ))}
+                <div className="grid grid-cols-7 border-b border-foreground/10 bg-secondary/30">
+                  {WEEKDAYS.map((weekday) => (
+                    <div
+                      key={weekday}
+                      className="px-2 py-3 text-center text-xs font-medium text-foreground/60"
+                    >
+                      {weekday}
                     </div>
-                  )}
-                </aside>
+                  ))}
+                </div>
+
+                <div className="grid grid-cols-7">
+                  {calendarDays.map(({ date, isCurrentMonth }) => {
+                    const dateKey = getLocalDateKey(date);
+                    const dayReservations = reservationsByDate[dateKey] ?? [];
+                    const isSelected = selectedDateKey === dateKey;
+                    const isToday = dateKey === getLocalDateKey(new Date());
+
+                    return (
+                      <button
+                        key={dateKey}
+                        type="button"
+                        onClick={() => setSelectedDateKey(dateKey)}
+                        className={[
+                          'min-h-28 border-b border-r border-foreground/10 p-2 text-left transition-colors last:border-r-0 md:min-h-32',
+                          isCurrentMonth
+                            ? 'bg-background hover:bg-secondary/30'
+                            : 'bg-muted/20 text-foreground/35 hover:bg-muted/30',
+                          isSelected ? 'ring-2 ring-inset ring-primary' : '',
+                        ].join(' ')}
+                      >
+                        <div className="mb-2 flex items-center justify-between gap-2">
+                          <span
+                            className={[
+                              'flex size-7 items-center justify-center text-sm',
+                              isToday
+                                ? 'bg-primary text-primary-foreground'
+                                : 'text-foreground/70',
+                            ].join(' ')}
+                          >
+                            {date.getDate()}
+                          </span>
+                          {dayReservations.length > 0 && (
+                            <span className="text-xs text-accent">
+                              {dayReservations.length}건
+                            </span>
+                          )}
+                        </div>
+
+                        <div className="space-y-1">
+                          {dayReservations.slice(0, 2).map((reservation) => (
+                            <div
+                              key={reservation.id}
+                              className={`truncate border px-2 py-1 text-xs ${statusClassNames[reservation.status]}`}
+                              title={reservation.class_name}
+                            >
+                              {reservation.class_name}
+                            </div>
+                          ))}
+                          {dayReservations.length > 2 && (
+                            <div className="text-xs text-foreground/45">
+                              +{dayReservations.length - 2}개 더보기
+                            </div>
+                          )}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
               </div>
-            )}
+
+              <aside className="border border-foreground/10 bg-card/60 p-5">
+                <p className="mb-2 text-xs uppercase tracking-[0.16em] text-accent">
+                  Selected Date
+                </p>
+                <h3 className="mb-5 text-xl font-semibold text-foreground">
+                  {formatDisplayDate(selectedDateKey)}
+                </h3>
+
+                {selectedReservations.length === 0 ? (
+                  <p className="text-sm text-foreground/55">
+                    선택한 날짜에는 예약이 없습니다.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {selectedReservations.map((reservation) => (
+                      <article
+                        key={reservation.id}
+                        className="border border-foreground/10 p-4"
+                      >
+                        <div className="mb-3 flex items-start justify-between gap-3">
+                          <h4 className="text-base font-semibold text-foreground">
+                            {reservation.class_name}
+                          </h4>
+                          <span
+                            className={`shrink-0 border px-2 py-1 text-xs ${statusClassNames[reservation.status]}`}
+                          >
+                            {statusLabels[reservation.status]}
+                          </span>
+                        </div>
+                        {reservation.note && (
+                          <p className="text-sm leading-relaxed text-foreground/70">
+                            {reservation.note}
+                          </p>
+                        )}
+                      </article>
+                    ))}
+                  </div>
+                )}
+              </aside>
+            </div>
           </section>
         </section>
       </main>
