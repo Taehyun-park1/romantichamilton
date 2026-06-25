@@ -254,6 +254,55 @@ begin
 end;
 $$;
 
+create or replace function public.create_review_invite(
+  invite_token text,
+  customer_name text,
+  review_type text,
+  product_name text,
+  class_name text
+)
+returns table (
+  id uuid,
+  token text,
+  expires_at timestamptz
+)
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  if not public.is_admin() then
+    raise exception 'Only admins can create review invites.';
+  end if;
+
+  if review_type not in ('class', 'product', 'offline', 'other') then
+    raise exception 'Invalid review type.';
+  end if;
+
+  return query
+  insert into public.review_invites (
+    token,
+    customer_name,
+    review_type,
+    product_name,
+    class_name,
+    expires_at
+  )
+  values (
+    invite_token,
+    nullif(trim(customer_name), ''),
+    review_type,
+    case when review_type = 'product' then nullif(trim(product_name), '') else null end,
+    case when review_type = 'class' then nullif(trim(class_name), '') else null end,
+    now() + interval '7 days'
+  )
+  returning
+    review_invites.id,
+    review_invites.token,
+    review_invites.expires_at;
+end;
+$$;
+
 drop trigger if exists prevent_profile_role_escalation on public.profiles;
 create trigger prevent_profile_role_escalation
 before update on public.profiles

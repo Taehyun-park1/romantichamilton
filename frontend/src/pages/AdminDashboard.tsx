@@ -474,17 +474,12 @@ export default function AdminDashboard() {
     if (!supabase) return;
 
     const token = createReviewToken();
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-    const { error } = await supabase.from('review_invites').insert({
-      token,
-      customer_name: inviteCustomerName.trim() || null,
+    const { error } = await supabase.rpc('create_review_invite', {
+      invite_token: token,
+      customer_name: inviteCustomerName.trim(),
       review_type: inviteReviewType,
-      product_name:
-        inviteReviewType === 'product' ? inviteProductName.trim() || null : null,
-      class_name:
-        inviteReviewType === 'class' ? inviteClassName.trim() || null : null,
-      expires_at: expiresAt.toISOString(),
+      product_name: inviteProductName.trim(),
+      class_name: inviteClassName.trim(),
     });
 
     if (error) {
