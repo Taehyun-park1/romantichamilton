@@ -4,6 +4,7 @@ import {
   CalendarDays,
   MessageSquareText,
   Package,
+  Plus,
   RefreshCw,
   Save,
   Star,
@@ -98,6 +99,39 @@ function parseColors(value: string) {
     .split(',')
     .map((color) => color.trim())
     .filter(Boolean);
+}
+
+function createAdminItemId(prefix: string) {
+  return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
+}
+
+function createDraftProduct(sortOrder: number): SiteProduct {
+  return {
+    id: createAdminItemId('prod'),
+    name: 'New Product',
+    description: '',
+    price: 0,
+    colors: ['#7C4F38'],
+    badge: null,
+    image: '/rh-images/rh-01.png',
+    category: 'wallets',
+    is_active: true,
+    sort_order: sortOrder,
+  };
+}
+
+function createDraftClass(sortOrder: number): WorkshopClass {
+  return {
+    id: createAdminItemId('ws'),
+    name: 'New Class',
+    description: '',
+    duration: '2시간',
+    level: 'beginner',
+    price: 0,
+    image: '/rh-images/rh-08.png',
+    is_active: true,
+    sort_order: sortOrder,
+  };
 }
 
 export default function AdminDashboard() {
@@ -212,6 +246,20 @@ export default function AdminDashboard() {
           : workshopClass
       )
     );
+  };
+
+  const addProduct = () => {
+    setProducts((currentProducts) => [
+      createDraftProduct(currentProducts.length),
+      ...currentProducts,
+    ]);
+  };
+
+  const addClass = () => {
+    setClasses((currentClasses) => [
+      createDraftClass(currentClasses.length),
+      ...currentClasses,
+    ]);
   };
 
   const saveProduct = async (product: SiteProduct) => {
@@ -412,6 +460,16 @@ export default function AdminDashboard() {
 
           {activeTab === 'products' && (
             <section className="space-y-4">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={addProduct}
+                  className="inline-flex items-center gap-2 border border-foreground/15 px-4 py-2.5 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground"
+                >
+                  <Plus className="size-4" />
+                  새 제품 추가
+                </button>
+              </div>
               {products.map((product) => (
                 <article
                   key={product.id}
@@ -591,6 +649,16 @@ export default function AdminDashboard() {
 
           {activeTab === 'classes' && (
             <section className="space-y-4">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={addClass}
+                  className="inline-flex items-center gap-2 border border-foreground/15 px-4 py-2.5 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground"
+                >
+                  <Plus className="size-4" />
+                  새 클래스 추가
+                </button>
+              </div>
               {classes.map((workshopClass) => (
                 <article
                   key={workshopClass.id}
