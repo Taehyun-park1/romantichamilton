@@ -20,6 +20,7 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/auth"} component={AuthPage} />
       <Route path={"/reserve"} component={ReservationPage} />
+      <Route path={"/review/write/:reviewType"} component={ReviewWritePage} />
       <Route path={"/review/write"} component={ReviewWritePage} />
       <Route path={"/my"} component={MyPage} />
       <Route path={"/admin"} component={AdminDashboard} />

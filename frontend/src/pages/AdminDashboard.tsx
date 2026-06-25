@@ -492,7 +492,7 @@ export default function AdminDashboard() {
       return;
     }
 
-    const reviewUrl = `${window.location.origin}/review/write?token=${token}`;
+    const reviewUrl = `${window.location.origin}/review/write/${inviteReviewType}?token=${token}`;
     setGeneratedReviewUrl(reviewUrl);
     setInviteCustomerName('');
     setInviteProductName('');

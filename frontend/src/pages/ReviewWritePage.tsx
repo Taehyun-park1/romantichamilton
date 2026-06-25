@@ -5,10 +5,11 @@ import Header from '@/components/Header';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 type InviteStatus = 'loading' | 'valid' | 'invalid' | 'used' | 'expired' | 'submitted';
+type ReviewType = 'class' | 'product' | 'offline' | 'other';
 
 interface PublicReviewInvite {
   customer_name: string | null;
-  review_type: 'class' | 'product' | 'offline' | 'other';
+  review_type: ReviewType;
   product_name: string | null;
   class_name: string | null;
   expires_at: string;
@@ -16,18 +17,36 @@ interface PublicReviewInvite {
   is_valid: boolean;
 }
 
-const reviewTypeLabels: Record<PublicReviewInvite['review_type'], string> = {
+const reviewTypeLabels: Record<ReviewType, string> = {
   class: '클래스',
   product: '제품',
   offline: '오프라인 방문',
   other: '기타',
 };
 
+function getUrlReviewType() {
+  if (typeof window === 'undefined') return null;
+
+  const lastSegment = window.location.pathname.split('/').filter(Boolean).at(-1);
+
+  if (
+    lastSegment === 'class' ||
+    lastSegment === 'product' ||
+    lastSegment === 'offline' ||
+    lastSegment === 'other'
+  ) {
+    return lastSegment;
+  }
+
+  return null;
+}
+
 export default function ReviewWritePage() {
   const token = useMemo(() => {
     if (typeof window === 'undefined') return '';
     return new URLSearchParams(window.location.search).get('token') ?? '';
   }, []);
+  const urlReviewType = useMemo(() => getUrlReviewType(), []);
   const [status, setStatus] = useState<InviteStatus>('loading');
   const [invite, setInvite] = useState<PublicReviewInvite | null>(null);
   const [displayName, setDisplayName] = useState('');
@@ -61,6 +80,11 @@ export default function ReviewWritePage() {
       setInvite(nextInvite);
       setDisplayName(nextInvite.customer_name ?? '');
 
+      if (urlReviewType && nextInvite.review_type !== urlReviewType) {
+        setStatus('invalid');
+        return;
+      }
+
       if (nextInvite.used_at) {
         setStatus('used');
         return;
@@ -79,7 +103,7 @@ export default function ReviewWritePage() {
     return () => {
       mounted = false;
     };
-  }, [token]);
+  }, [token, urlReviewType]);
 
   const targetName =
     invite?.product_name || invite?.class_name || reviewTypeLabels[invite?.review_type ?? 'other'];
