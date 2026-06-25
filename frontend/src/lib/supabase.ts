@@ -43,14 +43,30 @@ export interface ClassReservation {
 
 export interface WorkshopReview {
   id: string;
-  user_id: string;
+  user_id: string | null;
   display_name: string;
   rating: number;
   title: string;
   content: string;
   status: 'pending' | 'approved' | 'hidden';
+  invite_id?: string | null;
+  review_type?: 'class' | 'product' | 'offline' | 'other';
+  product_name?: string | null;
+  class_name?: string | null;
   created_at: string;
   updated_at?: string;
+}
+
+export interface ReviewInvite {
+  id: string;
+  token: string;
+  customer_name: string | null;
+  review_type: 'class' | 'product' | 'offline' | 'other';
+  product_name: string | null;
+  class_name: string | null;
+  expires_at: string;
+  used_at: string | null;
+  created_at: string;
 }
 
 export interface SiteProduct {

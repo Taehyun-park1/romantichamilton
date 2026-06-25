@@ -28,15 +28,47 @@ create table if not exists public.class_reservations (
 
 create table if not exists public.workshop_reviews (
   id uuid primary key default gen_random_uuid(),
-  user_id uuid not null references auth.users(id) on delete cascade,
+  user_id uuid references auth.users(id) on delete set null,
   display_name text not null,
   rating integer not null check (rating between 1 and 5),
   title text not null check (char_length(title) between 2 and 80),
   content text not null check (char_length(content) between 10 and 1000),
+  invite_id uuid,
+  review_type text not null default 'class' check (review_type in ('class', 'product', 'offline', 'other')),
+  product_name text,
+  class_name text,
   status text not null default 'pending' check (status in ('pending', 'approved', 'hidden')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.workshop_reviews
+  alter column user_id drop not null;
+
+alter table public.workshop_reviews
+  add column if not exists invite_id uuid,
+  add column if not exists review_type text not null default 'class' check (review_type in ('class', 'product', 'offline', 'other')),
+  add column if not exists product_name text,
+  add column if not exists class_name text;
+
+create table if not exists public.review_invites (
+  id uuid primary key default gen_random_uuid(),
+  token text not null unique,
+  customer_name text,
+  review_type text not null default 'offline' check (review_type in ('class', 'product', 'offline', 'other')),
+  product_name text,
+  class_name text,
+  expires_at timestamptz not null default (now() + interval '7 days'),
+  used_at timestamptz,
+  created_at timestamptz not null default now()
+);
+
+alter table public.workshop_reviews
+  drop constraint if exists workshop_reviews_invite_id_fkey;
+
+alter table public.workshop_reviews
+  add constraint workshop_reviews_invite_id_fkey
+  foreign key (invite_id) references public.review_invites(id) on delete set null;
 
 create table if not exists public.site_products (
   id text primary key,
@@ -90,6 +122,7 @@ set
 alter table public.profiles enable row level security;
 alter table public.class_reservations enable row level security;
 alter table public.workshop_reviews enable row level security;
+alter table public.review_invites enable row level security;
 alter table public.site_products enable row level security;
 alter table public.workshop_classes enable row level security;
 
@@ -119,6 +152,105 @@ begin
   end if;
 
   return new;
+end;
+$$;
+
+create or replace function public.get_review_invite(invite_token text)
+returns table (
+  customer_name text,
+  review_type text,
+  product_name text,
+  class_name text,
+  expires_at timestamptz,
+  used_at timestamptz,
+  is_valid boolean
+)
+language sql
+security definer
+set search_path = public
+as $$
+  select
+    review_invites.customer_name,
+    review_invites.review_type,
+    review_invites.product_name,
+    review_invites.class_name,
+    review_invites.expires_at,
+    review_invites.used_at,
+    review_invites.used_at is null and review_invites.expires_at > now() as is_valid
+  from public.review_invites
+  where review_invites.token = invite_token
+  limit 1;
+$$;
+
+create or replace function public.submit_invite_review(
+  invite_token text,
+  display_name text,
+  rating integer,
+  title text,
+  content text
+)
+returns uuid
+language plpgsql
+security definer
+set search_path = public
+as $$
+declare
+  target_invite public.review_invites%rowtype;
+  review_id uuid;
+begin
+  select *
+  into target_invite
+  from public.review_invites
+  where token = invite_token
+  for update;
+
+  if target_invite.id is null then
+    raise exception 'Invalid review invite.';
+  end if;
+
+  if target_invite.used_at is not null then
+    raise exception 'This review invite was already used.';
+  end if;
+
+  if target_invite.expires_at <= now() then
+    raise exception 'This review invite has expired.';
+  end if;
+
+  if rating < 1 or rating > 5 then
+    raise exception 'Rating must be between 1 and 5.';
+  end if;
+
+  insert into public.workshop_reviews (
+    user_id,
+    invite_id,
+    display_name,
+    rating,
+    title,
+    content,
+    review_type,
+    product_name,
+    class_name,
+    status
+  )
+  values (
+    null,
+    target_invite.id,
+    coalesce(nullif(trim(display_name), ''), target_invite.customer_name, '고객'),
+    rating,
+    trim(title),
+    trim(content),
+    target_invite.review_type,
+    target_invite.product_name,
+    target_invite.class_name,
+    'pending'
+  )
+  returning id into review_id;
+
+  update public.review_invites
+  set used_at = now()
+  where id = target_invite.id;
+
+  return review_id;
 end;
 $$;
 
@@ -194,6 +326,13 @@ with check (auth.uid() = user_id and status = 'pending');
 drop policy if exists "workshop_reviews_admin_all" on public.workshop_reviews;
 create policy "workshop_reviews_admin_all"
 on public.workshop_reviews
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "review_invites_admin_all" on public.review_invites;
+create policy "review_invites_admin_all"
+on public.review_invites
 for all
 using (public.is_admin())
 with check (public.is_admin());

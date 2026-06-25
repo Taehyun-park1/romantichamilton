@@ -2,7 +2,9 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BookOpen,
   CalendarDays,
+  Copy,
   ImageUp,
+  Link as LinkIcon,
   MessageSquareText,
   Package,
   Plus,
@@ -18,6 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   type ClassReservation,
   isSupabaseConfigured,
+  type Profile,
   type SiteProduct,
   supabase,
   type WorkshopClass,
@@ -36,6 +39,16 @@ const reviewStatusLabels: Record<WorkshopReview['status'], string> = {
   pending: '대기',
   approved: '게시',
   hidden: '숨김',
+};
+
+const reviewTypeLabels: Record<
+  NonNullable<WorkshopReview['review_type']>,
+  string
+> = {
+  class: '클래스',
+  product: '제품',
+  offline: '오프라인',
+  other: '기타',
 };
 
 const productCategoryLabels: Record<SiteProduct['category'], string> = {
@@ -114,6 +127,12 @@ function getSafeFileName(fileName: string) {
   return `${baseName || 'image'}-${Date.now()}.${extension}`;
 }
 
+function createReviewToken() {
+  const bytes = new Uint8Array(24);
+  crypto.getRandomValues(bytes);
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, '0')).join('');
+}
+
 function createDraftProduct(sortOrder: number): SiteProduct {
   return {
     id: createAdminItemId('prod'),
@@ -155,9 +174,16 @@ export default function AdminDashboard() {
   );
   const [reservations, setReservations] = useState<ClassReservation[]>([]);
   const [reviews, setReviews] = useState<WorkshopReview[]>([]);
+  const [profiles, setProfiles] = useState<Profile[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
+  const [inviteCustomerName, setInviteCustomerName] = useState('');
+  const [inviteReviewType, setInviteReviewType] =
+    useState<NonNullable<WorkshopReview['review_type']>>('offline');
+  const [inviteProductName, setInviteProductName] = useState('');
+  const [inviteClassName, setInviteClassName] = useState('');
+  const [generatedReviewUrl, setGeneratedReviewUrl] = useState('');
 
   const loadAdminData = useCallback(async () => {
     if (!supabase || !isSupabaseConfigured) {
@@ -168,7 +194,13 @@ export default function AdminDashboard() {
     setDataLoading(true);
     const supabaseClient = supabase;
 
-    const [productResult, classResult, reservationResult, reviewResult] =
+    const [
+      productResult,
+      classResult,
+      reservationResult,
+      reviewResult,
+      profileResult,
+    ] =
       await Promise.all([
         supabaseClient
           .from('site_products')
@@ -185,6 +217,10 @@ export default function AdminDashboard() {
           .order('created_at', { ascending: false }),
         supabaseClient
           .from('workshop_reviews')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        supabaseClient
+          .from('profiles')
           .select('*')
           .order('created_at', { ascending: false }),
       ]);
@@ -207,6 +243,12 @@ export default function AdminDashboard() {
       toast.error(reviewResult.error.message);
     } else {
       setReviews((reviewResult.data ?? []) as WorkshopReview[]);
+    }
+
+    if (profileResult.error) {
+      toast.error(profileResult.error.message);
+    } else {
+      setProfiles((profileResult.data ?? []) as Profile[]);
     }
 
     setDataLoading(false);
@@ -424,6 +466,70 @@ export default function AdminDashboard() {
       )
     );
     toast.success('리뷰 상태가 변경되었습니다.');
+  };
+
+  const createReviewInvite = async (event: React.FormEvent) => {
+    event.preventDefault();
+
+    if (!supabase) return;
+
+    const token = createReviewToken();
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    const { error } = await supabase.from('review_invites').insert({
+      token,
+      customer_name: inviteCustomerName.trim() || null,
+      review_type: inviteReviewType,
+      product_name:
+        inviteReviewType === 'product' ? inviteProductName.trim() || null : null,
+      class_name:
+        inviteReviewType === 'class' ? inviteClassName.trim() || null : null,
+      expires_at: expiresAt.toISOString(),
+    });
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    const reviewUrl = `${window.location.origin}/review/write?token=${token}`;
+    setGeneratedReviewUrl(reviewUrl);
+    setInviteCustomerName('');
+    setInviteProductName('');
+    setInviteClassName('');
+    toast.success('리뷰 링크가 생성되었습니다.');
+  };
+
+  const copyReviewInviteUrl = async () => {
+    if (!generatedReviewUrl) return;
+
+    await navigator.clipboard.writeText(generatedReviewUrl);
+    toast.success('리뷰 링크를 복사했습니다.');
+  };
+
+  const updateReviewAuthor = async (reviewId: string, userId: string | null) => {
+    if (!supabase) return;
+
+    setUpdatingId(reviewId);
+
+    const { error } = await supabase
+      .from('workshop_reviews')
+      .update({ user_id: userId, updated_at: new Date().toISOString() })
+      .eq('id', reviewId);
+
+    setUpdatingId(null);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    setReviews((currentReviews) =>
+      currentReviews.map((review) =>
+        review.id === reviewId ? { ...review, user_id: userId } : review
+      )
+    );
+    toast.success('리뷰 작성자가 변경되었습니다.');
   };
 
   if (loading || dataLoading) {
@@ -907,6 +1013,112 @@ export default function AdminDashboard() {
 
           {activeTab === 'reviews' && (
             <section className="space-y-4">
+              <form
+                onSubmit={createReviewInvite}
+                className="border border-foreground/10 bg-card/60 p-5"
+              >
+                <div className="mb-5 flex items-start gap-3">
+                  <LinkIcon className="mt-1 size-4 text-accent" />
+                  <div>
+                    <h2 className="text-xl font-semibold text-foreground">
+                      리뷰 링크 만들기
+                    </h2>
+                    <p className="mt-1 text-sm text-foreground/55">
+                      로그인 없이 작성 가능한 1회용 리뷰 링크입니다. 생성 후 7일 동안만 사용할 수 있습니다.
+                    </p>
+                  </div>
+                </div>
+
+                <div className="grid gap-4 md:grid-cols-4">
+                  <label>
+                    <span className="mb-2 block text-sm text-foreground/60">
+                      고객명
+                    </span>
+                    <input
+                      value={inviteCustomerName}
+                      onChange={(event) =>
+                        setInviteCustomerName(event.target.value)
+                      }
+                      className="w-full border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground"
+                    />
+                  </label>
+                  <label>
+                    <span className="mb-2 block text-sm text-foreground/60">
+                      리뷰 유형
+                    </span>
+                    <select
+                      value={inviteReviewType}
+                      onChange={(event) =>
+                        setInviteReviewType(
+                          event.target
+                            .value as NonNullable<WorkshopReview['review_type']>
+                        )
+                      }
+                      className="w-full border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground"
+                    >
+                      {Object.entries(reviewTypeLabels).map(([value, label]) => (
+                        <option key={value} value={value}>
+                          {label}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                  <label>
+                    <span className="mb-2 block text-sm text-foreground/60">
+                      제품명
+                    </span>
+                    <input
+                      value={inviteProductName}
+                      onChange={(event) =>
+                        setInviteProductName(event.target.value)
+                      }
+                      disabled={inviteReviewType !== 'product'}
+                      className="w-full border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground disabled:opacity-35"
+                    />
+                  </label>
+                  <label>
+                    <span className="mb-2 block text-sm text-foreground/60">
+                      클래스명
+                    </span>
+                    <input
+                      value={inviteClassName}
+                      onChange={(event) =>
+                        setInviteClassName(event.target.value)
+                      }
+                      disabled={inviteReviewType !== 'class'}
+                      className="w-full border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground disabled:opacity-35"
+                    />
+                  </label>
+                </div>
+
+                <div className="mt-5 flex flex-col gap-3 md:flex-row md:items-center">
+                  <button
+                    type="submit"
+                    className="inline-flex items-center justify-center gap-2 border border-foreground/15 px-4 py-2.5 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground"
+                  >
+                    <LinkIcon className="size-4" />
+                    링크 생성
+                  </button>
+                  {generatedReviewUrl && (
+                    <div className="flex min-w-0 flex-1 items-center gap-2">
+                      <input
+                        value={generatedReviewUrl}
+                        readOnly
+                        className="min-w-0 flex-1 truncate border-b border-foreground/20 bg-transparent py-2 text-xs text-foreground/55 outline-none"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => void copyReviewInviteUrl()}
+                        className="inline-flex shrink-0 items-center gap-2 border border-foreground/15 px-3 py-2 text-xs text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground"
+                      >
+                        <Copy className="size-3.5" />
+                        복사
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </form>
+
               {reviews.length === 0 ? (
                 <p className="border border-foreground/10 p-6 text-sm text-foreground/55">
                   리뷰 내역이 없습니다.
@@ -946,6 +1158,41 @@ export default function AdminDashboard() {
                     <p className="mb-4 text-sm leading-relaxed text-foreground/70">
                       {review.content}
                     </p>
+
+                    <div className="mb-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
+                      <div className="text-xs text-foreground/50">
+                        <span className="mr-2">
+                          {reviewTypeLabels[review.review_type ?? 'class']}
+                        </span>
+                        {review.product_name && <span>{review.product_name}</span>}
+                        {review.class_name && <span>{review.class_name}</span>}
+                      </div>
+                      <label>
+                        <span className="mb-1 block text-xs text-foreground/45">
+                          작성자 연결
+                        </span>
+                        <select
+                          value={review.user_id ?? ''}
+                          disabled={updatingId === review.id}
+                          onChange={(event) =>
+                            void updateReviewAuthor(
+                              review.id,
+                              event.target.value || null
+                            )
+                          }
+                          className="w-full border-b border-foreground/20 bg-transparent py-2 text-sm outline-none focus:border-foreground disabled:opacity-40"
+                        >
+                          <option value="">작성자 없음</option>
+                          {profiles.map((profile) => (
+                            <option key={profile.id} value={profile.id}>
+                              {profile.display_name ||
+                                profile.email ||
+                                profile.id}
+                            </option>
+                          ))}
+                        </select>
+                      </label>
+                    </div>
 
                     <div className="flex flex-wrap gap-2">
                       {(['pending', 'approved', 'hidden'] as const).map(
