@@ -5,7 +5,7 @@ import ProductGrid from '@/components/ProductGrid';
 import BrandStory from '@/components/BrandStory';
 import CustomOrder from '@/components/CustomOrder';
 import Workshop from '@/components/Workshop';
-import Journal from '@/components/Journal';
+// import Journal from '@/components/Journal';
 import Reviews from '@/components/Reviews';
 import Contact from '@/components/Contact';
 import BackToTopButton from '@/components/BackToTopButton';
@@ -37,7 +37,8 @@ export default function Home() {
         <BrandStory />
         <CustomOrder />
         <Workshop />
-        <Journal />
+        {/* Photo Journal temporarily hidden. Restore by uncommenting the import and this component. */}
+        {/* <Journal /> */}
         <Reviews />
         <Contact />
       </main>

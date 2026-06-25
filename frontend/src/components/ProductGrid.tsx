@@ -1,6 +1,12 @@
+import { useState } from 'react';
+import { ChevronDown } from 'lucide-react';
 import { products } from '@/data/products';
 
 export default function ProductGrid() {
+  const [isExpanded, setIsExpanded] = useState(false);
+  const visibleProducts = isExpanded ? products : products.slice(0, 3);
+  const hiddenProductCount = Math.max(products.length - 3, 0);
+
   return (
     <section
       id="products"
@@ -28,8 +34,8 @@ export default function ProductGrid() {
           </a>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-x-8 gap-y-14">
-          {products.map((product, index) => (
+        <div className="grid grid-cols-1 gap-x-8 gap-y-14 md:grid-cols-2 lg:grid-cols-3">
+          {visibleProducts.map((product, index) => (
             <article key={product.id} className="group">
               <div className="relative overflow-hidden bg-secondary aspect-[4/5] mb-6">
                 <img
@@ -63,6 +69,24 @@ export default function ProductGrid() {
             </article>
           ))}
         </div>
+
+        {hiddenProductCount > 0 && (
+          <div className="mt-12 flex justify-center">
+            <button
+              type="button"
+              onClick={() => setIsExpanded((expanded) => !expanded)}
+              className="inline-flex items-center gap-2 border border-foreground/15 px-5 py-3 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground"
+              aria-expanded={isExpanded}
+            >
+              {isExpanded ? '제품 접기' : `제품 ${hiddenProductCount}개 더보기`}
+              <ChevronDown
+                className={`size-4 transition-transform ${
+                  isExpanded ? 'rotate-180' : ''
+                }`}
+              />
+            </button>
+          </div>
+        )}
       </div>
     </section>
   );
