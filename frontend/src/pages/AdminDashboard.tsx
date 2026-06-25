@@ -98,13 +98,6 @@ function formatDateTime(dateValue: string) {
   }).format(new Date(dateValue));
 }
 
-function parseColors(value: string) {
-  return value
-    .split(',')
-    .map((color) => color.trim())
-    .filter(Boolean);
-}
-
 function createAdminItemId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
@@ -631,20 +624,6 @@ export default function AdminDashboard() {
                           }
                           rows={3}
                           className="w-full resize-none border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground"
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="mb-2 block text-sm text-foreground/60">
-                          색상 HEX
-                        </span>
-                        <input
-                          value={product.colors.join(', ')}
-                          onChange={(event) =>
-                            updateProduct(product.id, {
-                              colors: parseColors(event.target.value),
-                            })
-                          }
-                          className="w-full border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground"
                         />
                       </label>
                       <div className="grid grid-cols-3 gap-3 md:col-span-2">
