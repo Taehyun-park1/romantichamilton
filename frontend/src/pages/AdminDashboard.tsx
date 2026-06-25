@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BookOpen,
   CalendarDays,
+  ImageUp,
   MessageSquareText,
   Package,
   Plus,
@@ -58,6 +59,9 @@ const statusClassNames = {
   hidden: 'border-foreground/20 bg-foreground/5 text-foreground/55',
 };
 
+const ADMIN_IMAGE_BUCKET = 'admin-images';
+const MAX_IMAGE_SIZE = 5 * 1024 * 1024;
+
 function toSiteProduct(product: (typeof fallbackProducts)[number], index: number): SiteProduct {
   return {
     ...product,
@@ -105,6 +109,18 @@ function createAdminItemId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
 
+function getSafeFileName(fileName: string) {
+  const extension = fileName.split('.').pop()?.toLowerCase() ?? 'jpg';
+  const baseName = fileName
+    .replace(/\.[^/.]+$/, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 40);
+
+  return `${baseName || 'image'}-${Date.now()}.${extension}`;
+}
+
 function createDraftProduct(sortOrder: number): SiteProduct {
   return {
     id: createAdminItemId('prod'),
@@ -148,6 +164,7 @@ export default function AdminDashboard() {
   const [reviews, setReviews] = useState<WorkshopReview[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
 
   const loadAdminData = useCallback(async () => {
     if (!supabase || !isSupabaseConfigured) {
@@ -260,6 +277,64 @@ export default function AdminDashboard() {
       createDraftClass(currentClasses.length),
       ...currentClasses,
     ]);
+  };
+
+  const uploadAdminImage = async (file: File, folder: 'products' | 'classes') => {
+    if (!supabase) {
+      toast.error('Supabase 설정이 필요합니다.');
+      return null;
+    }
+
+    if (!file.type.startsWith('image/')) {
+      toast.error('이미지 파일만 업로드할 수 있습니다.');
+      return null;
+    }
+
+    if (file.size > MAX_IMAGE_SIZE) {
+      toast.error('이미지는 5MB 이하만 업로드할 수 있습니다.');
+      return null;
+    }
+
+    const filePath = `${folder}/${getSafeFileName(file.name)}`;
+    const { error } = await supabase.storage
+      .from(ADMIN_IMAGE_BUCKET)
+      .upload(filePath, file, {
+        cacheControl: '31536000',
+        upsert: false,
+      });
+
+    if (error) {
+      toast.error(error.message);
+      return null;
+    }
+
+    const { data } = supabase.storage
+      .from(ADMIN_IMAGE_BUCKET)
+      .getPublicUrl(filePath);
+
+    return data.publicUrl;
+  };
+
+  const uploadProductImage = async (productId: string, file: File) => {
+    setUploadingImageId(productId);
+    const publicUrl = await uploadAdminImage(file, 'products');
+    setUploadingImageId(null);
+
+    if (!publicUrl) return;
+
+    updateProduct(productId, { image: publicUrl });
+    toast.success('제품 사진이 등록되었습니다. 저장을 눌러 반영해주세요.');
+  };
+
+  const uploadClassImage = async (classId: string, file: File) => {
+    setUploadingImageId(classId);
+    const publicUrl = await uploadAdminImage(file, 'classes');
+    setUploadingImageId(null);
+
+    if (!publicUrl) return;
+
+    updateClass(classId, { image: publicUrl });
+    toast.success('클래스 사진이 등록되었습니다. 저장을 눌러 반영해주세요.');
   };
 
   const saveProduct = async (product: SiteProduct) => {
@@ -540,6 +615,22 @@ export default function AdminDashboard() {
                           className="w-full border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground"
                         />
                       </label>
+                      <label className="inline-flex cursor-pointer items-center justify-center gap-2 self-end border border-foreground/15 px-3 py-2 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground">
+                        <ImageUp className="size-4" />
+                        {uploadingImageId === product.id ? '업로드 중' : '사진 등록'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          disabled={uploadingImageId === product.id}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            event.target.value = '';
+                            if (!file) return;
+                            void uploadProductImage(product.id, file);
+                          }}
+                        />
+                      </label>
                       <label className="block">
                         <span className="mb-2 block text-sm text-foreground/60">
                           색상 HEX
@@ -727,6 +818,24 @@ export default function AdminDashboard() {
                             })
                           }
                           className="w-full border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground"
+                        />
+                      </label>
+                      <label className="inline-flex cursor-pointer items-center justify-center gap-2 self-end border border-foreground/15 px-3 py-2 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground">
+                        <ImageUp className="size-4" />
+                        {uploadingImageId === workshopClass.id
+                          ? '업로드 중'
+                          : '사진 등록'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          disabled={uploadingImageId === workshopClass.id}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            event.target.value = '';
+                            if (!file) return;
+                            void uploadClassImage(workshopClass.id, file);
+                          }}
                         />
                       </label>
                       <label>

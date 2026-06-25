@@ -67,6 +67,26 @@ create table if not exists public.workshop_classes (
   updated_at timestamptz not null default now()
 );
 
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+)
+values (
+  'admin-images',
+  'admin-images',
+  true,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+on conflict (id) do update
+set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
 alter table public.profiles enable row level security;
 alter table public.class_reservations enable row level security;
 alter table public.workshop_reviews enable row level security;
@@ -203,3 +223,28 @@ on public.workshop_classes
 for all
 using (public.is_admin())
 with check (public.is_admin());
+
+drop policy if exists "admin_images_public_select" on storage.objects;
+create policy "admin_images_public_select"
+on storage.objects
+for select
+using (bucket_id = 'admin-images');
+
+drop policy if exists "admin_images_admin_insert" on storage.objects;
+create policy "admin_images_admin_insert"
+on storage.objects
+for insert
+with check (bucket_id = 'admin-images' and public.is_admin());
+
+drop policy if exists "admin_images_admin_update" on storage.objects;
+create policy "admin_images_admin_update"
+on storage.objects
+for update
+using (bucket_id = 'admin-images' and public.is_admin())
+with check (bucket_id = 'admin-images' and public.is_admin());
+
+drop policy if exists "admin_images_admin_delete" on storage.objects;
+create policy "admin_images_admin_delete"
+on storage.objects
+for delete
+using (bucket_id = 'admin-images' and public.is_admin());
