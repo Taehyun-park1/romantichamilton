@@ -28,6 +28,10 @@ import {
 } from '@/lib/supabase';
 
 type AdminTab = 'products' | 'classes' | 'reviews' | 'reservations';
+type ReviewDeliveryChannel = 'email' | 'sms';
+
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)
+  ?.replace(/\/+$/, '');
 
 const reservationStatusLabels: Record<ClassReservation['status'], string> = {
   pending: '대기',
@@ -164,7 +168,7 @@ function createDraftClass(sortOrder: number): WorkshopClass {
 
 export default function AdminDashboard() {
   const [, navigate] = useLocation();
-  const { loading, isAuthenticated, isAdmin } = useAuth();
+  const { session, loading, isAuthenticated, isAdmin } = useAuth();
   const [activeTab, setActiveTab] = useState<AdminTab>('products');
   const [products, setProducts] = useState<SiteProduct[]>(
     fallbackProducts.map(toSiteProduct)
@@ -184,6 +188,14 @@ export default function AdminDashboard() {
   const [inviteProductName, setInviteProductName] = useState('');
   const [inviteClassName, setInviteClassName] = useState('');
   const [generatedReviewUrl, setGeneratedReviewUrl] = useState('');
+  const [reviewDeliveryChannel, setReviewDeliveryChannel] =
+    useState<ReviewDeliveryChannel>('email');
+  const [reviewRecipientEmail, setReviewRecipientEmail] = useState('');
+  const [reviewRecipientPhone, setReviewRecipientPhone] = useState('');
+  const [reviewInviteMessage, setReviewInviteMessage] = useState(
+    'Romantic Hamilton을 이용해주셔서 감사합니다. 아래 링크에서 후기를 남겨주세요.'
+  );
+  const [sendingReviewInvite, setSendingReviewInvite] = useState(false);
 
   const loadAdminData = useCallback(async () => {
     if (!supabase || !isSupabaseConfigured) {
@@ -500,6 +512,64 @@ export default function AdminDashboard() {
 
     await navigator.clipboard.writeText(generatedReviewUrl);
     toast.success('리뷰 링크를 복사했습니다.');
+  };
+
+  const reviewInviteText = `${reviewInviteMessage.trim()}\n\n${generatedReviewUrl}\n\n리뷰 링크는 1회만 사용할 수 있으며 7일 후 만료됩니다.`;
+
+  const sendReviewInviteEmail = async () => {
+    if (!generatedReviewUrl) {
+      toast.error('먼저 리뷰 링크를 생성해주세요.');
+      return;
+    }
+
+    if (!reviewRecipientEmail.trim()) {
+      toast.error('받는 이메일을 입력해주세요.');
+      return;
+    }
+
+    if (!session?.access_token) {
+      toast.error('관리자 로그인이 필요합니다.');
+      return;
+    }
+
+    setSendingReviewInvite(true);
+
+    try {
+      const response = await fetch(`${apiBaseUrl ?? ''}/api/review-invite/email`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${session.access_token}`,
+        },
+        body: JSON.stringify({
+          email: reviewRecipientEmail.trim(),
+          customerName: inviteCustomerName.trim(),
+          reviewUrl: generatedReviewUrl,
+          message: reviewInviteMessage.trim(),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('review_invite_email_failed');
+      }
+
+      toast.success('리뷰 요청 메일을 보냈습니다.');
+    } catch (error) {
+      console.error('Review invite email failed', error);
+      toast.error('리뷰 요청 메일을 보내지 못했습니다.');
+    } finally {
+      setSendingReviewInvite(false);
+    }
+  };
+
+  const copyReviewInviteMessage = async () => {
+    if (!generatedReviewUrl) {
+      toast.error('먼저 리뷰 링크를 생성해주세요.');
+      return;
+    }
+
+    await navigator.clipboard.writeText(reviewInviteText);
+    toast.success('리뷰 요청 문구를 복사했습니다.');
   };
 
   const updateReviewAuthor = async (reviewId: string, userId: string | null) => {
@@ -1111,6 +1181,103 @@ export default function AdminDashboard() {
                       </button>
                     </div>
                   )}
+                </div>
+
+                <div className="mt-6 border-t border-foreground/10 pt-5">
+                  <div className="mb-4 flex gap-2">
+                    {(['email', 'sms'] as const).map((channel) => (
+                      <button
+                        key={channel}
+                        type="button"
+                        onClick={() => setReviewDeliveryChannel(channel)}
+                        className={`border px-3 py-2 text-xs transition-colors ${
+                          reviewDeliveryChannel === channel
+                            ? 'border-foreground text-foreground'
+                            : 'border-foreground/15 text-foreground/55 hover:border-foreground/35 hover:text-foreground'
+                        }`}
+                      >
+                        {channel === 'email' ? '메일 폼' : '문자 폼'}
+                      </button>
+                    ))}
+                  </div>
+
+                  <div className="grid gap-4 md:grid-cols-[240px_minmax(0,1fr)]">
+                    <label>
+                      <span className="mb-2 block text-sm text-foreground/60">
+                        {reviewDeliveryChannel === 'email'
+                          ? '받는 이메일'
+                          : '휴대폰 번호'}
+                      </span>
+                      <input
+                        type={reviewDeliveryChannel === 'email' ? 'email' : 'tel'}
+                        value={
+                          reviewDeliveryChannel === 'email'
+                            ? reviewRecipientEmail
+                            : reviewRecipientPhone
+                        }
+                        onChange={(event) =>
+                          reviewDeliveryChannel === 'email'
+                            ? setReviewRecipientEmail(event.target.value)
+                            : setReviewRecipientPhone(event.target.value)
+                        }
+                        placeholder={
+                          reviewDeliveryChannel === 'email'
+                            ? 'name@example.com'
+                            : '010-1234-5678'
+                        }
+                        className="w-full border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground"
+                      />
+                    </label>
+
+                    <label>
+                      <span className="mb-2 block text-sm text-foreground/60">
+                        요청 문구
+                      </span>
+                      <textarea
+                        value={reviewInviteMessage}
+                        onChange={(event) =>
+                          setReviewInviteMessage(event.target.value)
+                        }
+                        rows={3}
+                        className="w-full resize-none border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="mt-4">
+                    <span className="mb-2 block text-sm text-foreground/60">
+                      {reviewDeliveryChannel === 'email'
+                        ? '메일 미리보기'
+                        : '문자 문구'}
+                    </span>
+                    <textarea
+                      value={reviewInviteText}
+                      readOnly
+                      rows={5}
+                      className="w-full resize-none border border-foreground/10 bg-background/60 p-3 text-sm leading-relaxed text-foreground/60 outline-none"
+                    />
+                  </div>
+
+                  <div className="mt-4 flex flex-wrap gap-2">
+                    {reviewDeliveryChannel === 'email' ? (
+                      <button
+                        type="button"
+                        disabled={sendingReviewInvite}
+                        onClick={() => void sendReviewInviteEmail()}
+                        className="inline-flex items-center gap-2 border border-foreground/15 px-4 py-2.5 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground disabled:opacity-40"
+                      >
+                        메일 발송
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => void copyReviewInviteMessage()}
+                        className="inline-flex items-center gap-2 border border-foreground/15 px-4 py-2.5 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground"
+                      >
+                        문자 문구 복사
+                      </button>
+                    )}
+                  </div>
                 </div>
               </form>
 

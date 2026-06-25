@@ -35,6 +35,13 @@ interface ContactRequestBody {
   website?: unknown;
 }
 
+interface ReviewInviteEmailRequestBody {
+  email?: unknown;
+  customerName?: unknown;
+  reviewUrl?: unknown;
+  message?: unknown;
+}
+
 interface ResendErrorResponse {
   message?: string;
   name?: string;
@@ -81,6 +88,56 @@ function normalizeText(value: unknown, maxLength: number) {
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function escapeHtml(value: string) {
+  return value
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#039;");
+}
+
+async function verifyAdminRequest(req: express.Request) {
+  const authorization = req.get("authorization") || "";
+  const token = authorization.replace(/^Bearer\s+/i, "");
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+  if (!token || !supabaseUrl || !anonKey) {
+    return false;
+  }
+
+  const normalizedSupabaseUrl = supabaseUrl.replace(/\/rest\/v1\/?$/, "").replace(/\/+$/, "");
+  const userResponse = await fetch(`${normalizedSupabaseUrl}/auth/v1/user`, {
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!userResponse.ok) return false;
+
+  const user = (await userResponse.json()) as { id?: string };
+  if (!user.id) return false;
+
+  const profileResponse = await fetch(
+    `${normalizedSupabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(
+      user.id
+    )}&select=role&limit=1`,
+    {
+      headers: {
+        apikey: anonKey,
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  if (!profileResponse.ok) return false;
+
+  const profiles = (await profileResponse.json()) as Array<{ role?: string }>;
+  return profiles[0]?.role === "admin";
 }
 
 function isContactRateLimited(ip: string) {
@@ -172,6 +229,77 @@ async function sendContactEmail(body: ContactRequestBody) {
   }
 }
 
+async function sendReviewInviteEmail(body: ReviewInviteEmailRequestBody) {
+  const email = normalizeText(body.email, 254).toLowerCase();
+  const customerName = normalizeText(body.customerName, 60) || "고객";
+  const reviewUrl = normalizeText(body.reviewUrl, 1000);
+  const message = normalizeText(body.message, 2000);
+
+  if (!isValidEmail(email) || !reviewUrl.startsWith("http")) {
+    throw new Error("invalid_review_invite_payload");
+  }
+
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const fromEmail =
+    process.env.RESEND_FROM_EMAIL || "contact@mail.romantichamilton.store";
+
+  if (!resendApiKey) {
+    throw new Error("resend_not_configured");
+  }
+
+  const safeName = escapeHtml(customerName);
+  const safeMessage = escapeHtml(
+    message ||
+      "Romantic Hamilton을 이용해주셔서 감사합니다. 아래 링크에서 후기를 남겨주세요."
+  ).replace(/\n/g, "<br />");
+  const safeReviewUrl = escapeHtml(reviewUrl);
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: `Romantic Hamilton <${fromEmail}>`,
+      to: [email],
+      subject: "[Romantic Hamilton] 리뷰 작성을 부탁드립니다",
+      text: [
+        `${customerName}님, 안녕하세요.`,
+        "",
+        message ||
+          "Romantic Hamilton을 이용해주셔서 감사합니다. 아래 링크에서 후기를 남겨주세요.",
+        "",
+        reviewUrl,
+        "",
+        "리뷰 링크는 1회만 사용할 수 있으며 7일 후 만료됩니다.",
+      ].join("\n"),
+      html: `<!doctype html>
+        <html>
+          <body style="margin:0;background:#f4f0ea;padding:32px;font-family:Arial,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#241f1b;">
+            <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5ddd3;padding:32px;">
+              <p style="margin:0 0 12px;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#9a6a43;">Romantic Hamilton</p>
+              <h1 style="margin:0 0 20px;font-size:24px;font-weight:600;">${safeName}님, 리뷰 작성을 부탁드립니다.</h1>
+              <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#5f554c;">${safeMessage}</p>
+              <a href="${safeReviewUrl}" style="display:inline-block;background:#241f1b;color:#ffffff;text-decoration:none;padding:14px 22px;font-size:14px;">리뷰 작성하기</a>
+              <p style="margin:24px 0 0;font-size:12px;line-height:1.6;color:#8b8178;">링크는 1회만 사용할 수 있으며 7일 후 만료됩니다.</p>
+            </div>
+          </body>
+        </html>`,
+    }),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as ResendErrorResponse;
+    console.error("Resend review invite email failed", {
+      status: response.status,
+      name: payload.name,
+      message: payload.message,
+    });
+    throw new Error("resend_send_failed");
+  }
+}
+
 async function createSupabaseMagicLink(profile: Required<NaverProfileResponse>["response"]) {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -234,7 +362,7 @@ async function startServer() {
     if (origin && allowedOrigins.has(origin)) {
       res.setHeader("Access-Control-Allow-Origin", origin);
       res.setHeader("Vary", "Origin");
-      res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+      res.setHeader("Access-Control-Allow-Headers", "Content-Type, Authorization");
       res.setHeader("Access-Control-Allow-Methods", "GET,POST,OPTIONS");
     }
 
@@ -278,6 +406,30 @@ async function startServer() {
 
       console.error("Contact request failed", { message });
       res.status(503).json({ error: "contact_service_unavailable" });
+    }
+  });
+
+  app.post("/api/review-invite/email", async (req, res) => {
+    try {
+      const isAdmin = await verifyAdminRequest(req);
+
+      if (!isAdmin) {
+        res.status(403).json({ error: "admin_required" });
+        return;
+      }
+
+      await sendReviewInviteEmail((req.body ?? {}) as ReviewInviteEmailRequestBody);
+      res.status(200).json({ success: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "review_invite_email_failed";
+
+      if (message === "invalid_review_invite_payload") {
+        res.status(400).json({ error: message });
+        return;
+      }
+
+      console.error("Review invite email send failed", error);
+      res.status(503).json({ error: "review_invite_email_unavailable" });
     }
   });
 
