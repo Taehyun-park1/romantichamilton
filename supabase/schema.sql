@@ -38,9 +38,40 @@ create table if not exists public.workshop_reviews (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.site_products (
+  id text primary key,
+  name text not null,
+  description text not null,
+  price integer not null default 0 check (price >= 0),
+  colors text[] not null default '{}',
+  badge text check (badge in ('NEW', 'BEST', 'CUSTOM')),
+  image text not null,
+  category text not null check (category in ('wallets', 'bags', 'desk', 'gifts')),
+  is_active boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+create table if not exists public.workshop_classes (
+  id text primary key,
+  name text not null,
+  description text not null,
+  duration text not null,
+  level text not null check (level in ('beginner', 'intermediate', 'advanced')),
+  price integer not null default 0 check (price >= 0),
+  image text not null,
+  is_active boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table public.profiles enable row level security;
 alter table public.class_reservations enable row level security;
 alter table public.workshop_reviews enable row level security;
+alter table public.site_products enable row level security;
+alter table public.workshop_classes enable row level security;
 
 create or replace function public.is_admin()
 returns boolean
@@ -143,6 +174,32 @@ with check (auth.uid() = user_id and status = 'pending');
 drop policy if exists "workshop_reviews_admin_all" on public.workshop_reviews;
 create policy "workshop_reviews_admin_all"
 on public.workshop_reviews
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "site_products_public_select_active" on public.site_products;
+create policy "site_products_public_select_active"
+on public.site_products
+for select
+using (is_active = true or public.is_admin());
+
+drop policy if exists "site_products_admin_all" on public.site_products;
+create policy "site_products_admin_all"
+on public.site_products
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "workshop_classes_public_select_active" on public.workshop_classes;
+create policy "workshop_classes_public_select_active"
+on public.workshop_classes
+for select
+using (is_active = true or public.is_admin());
+
+drop policy if exists "workshop_classes_admin_all" on public.workshop_classes;
+create policy "workshop_classes_admin_all"
+on public.workshop_classes
 for all
 using (public.is_admin())
 with check (public.is_admin());

@@ -1,17 +1,63 @@
-import { workshops } from '@/data/products';
+import { useEffect, useState } from 'react';
+import { workshops as fallbackWorkshops } from '@/data/products';
+import {
+  isSupabaseConfigured,
+  supabase,
+  type WorkshopClass,
+} from '@/lib/supabase';
+
+function toWorkshopClass(
+  workshop: (typeof fallbackWorkshops)[number],
+  index: number
+) {
+  return {
+    ...workshop,
+    is_active: true,
+    sort_order: index,
+  } satisfies WorkshopClass;
+}
 
 export default function Workshop() {
+  const [workshops, setWorkshops] = useState<WorkshopClass[]>(
+    fallbackWorkshops.map(toWorkshopClass)
+  );
+
+  useEffect(() => {
+    if (!supabase || !isSupabaseConfigured) return;
+
+    let mounted = true;
+    const supabaseClient = supabase;
+
+    const loadWorkshops = async () => {
+      const { data, error } = await supabaseClient
+        .from('workshop_classes')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (!mounted || error || !data || data.length === 0) return;
+
+      setWorkshops(data as WorkshopClass[]);
+    };
+
+    void loadWorkshops();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
   return (
     <section
       id="workshop"
-      className="scroll-mt-20 md:scroll-mt-24 py-24 md:py-36 bg-background"
+      className="scroll-mt-20 bg-background py-24 md:scroll-mt-24 md:py-36"
     >
       <div className="container">
         <div className="mb-14 md:mb-20">
           <p className="mb-3 text-xs uppercase tracking-[0.16em] text-accent">
             Workshop
           </p>
-          <h2 className="text-3xl md:text-5xl font-serif font-normal text-foreground mb-4">
+          <h2 className="mb-4 text-3xl font-semibold text-foreground md:text-5xl">
             직접 만들고 오래 사용하는 시간
           </h2>
           <p className="max-w-2xl text-base text-foreground/65">
@@ -19,23 +65,23 @@ export default function Workshop() {
           </p>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 lg:gap-10">
+        <div className="grid grid-cols-1 gap-8 md:grid-cols-3 lg:gap-10">
           {workshops.map((workshop) => (
             <article key={workshop.id} className="group">
-              <div className="relative overflow-hidden bg-secondary aspect-[4/5] mb-6">
+              <div className="relative mb-6 aspect-[4/5] overflow-hidden bg-secondary">
                 <img
                   src={workshop.image}
                   alt={workshop.name}
-                  className="w-full h-full object-cover image-hover"
+                  className="h-full w-full object-cover image-hover"
                 />
               </div>
-              <h3 className="text-xl font-serif font-normal text-foreground mb-3">
+              <h3 className="mb-3 text-xl font-semibold text-foreground">
                 {workshop.name}
               </h3>
-              <p className="text-sm text-foreground/60 mb-5 leading-relaxed">
+              <p className="mb-5 text-sm leading-relaxed text-foreground/60">
                 {workshop.description}
               </p>
-              <div className="flex items-center justify-between text-sm text-foreground/60 border-t border-foreground/10 pt-4">
+              <div className="flex items-center justify-between border-t border-foreground/10 pt-4 text-sm text-foreground/60">
                 <span>{workshop.duration}</span>
                 <span>
                   {workshop.price === 0

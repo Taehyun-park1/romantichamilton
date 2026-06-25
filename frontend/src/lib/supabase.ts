@@ -52,3 +52,32 @@ export interface WorkshopReview {
   created_at: string;
   updated_at?: string;
 }
+
+export interface SiteProduct {
+  id: string;
+  name: string;
+  description: string;
+  price: number;
+  colors: string[];
+  badge: 'NEW' | 'BEST' | 'CUSTOM' | null;
+  image: string;
+  category: 'wallets' | 'bags' | 'desk' | 'gifts';
+  is_active: boolean;
+  sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface WorkshopClass {
+  id: string;
+  name: string;
+  description: string;
+  duration: string;
+  level: 'beginner' | 'intermediate' | 'advanced';
+  price: number;
+  image: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
