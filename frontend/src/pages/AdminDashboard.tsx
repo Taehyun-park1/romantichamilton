@@ -550,12 +550,44 @@ export default function AdminDashboard() {
                   key={product.id}
                   className="border border-foreground/10 bg-card/60 p-5"
                 >
-                  <div className="grid gap-5 lg:grid-cols-[180px_minmax(0,1fr)]">
-                    <img
-                      src={product.image}
-                      alt={product.name}
-                      className="aspect-[4/5] w-full bg-secondary object-cover"
-                    />
+                  <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+                    <div className="space-y-3">
+                      <img
+                        src={product.image}
+                        alt={product.name}
+                        className="aspect-[4/5] w-full border border-foreground/10 bg-secondary object-cover"
+                      />
+                      <label className="flex cursor-pointer items-center justify-center gap-2 border border-foreground/15 px-3 py-2.5 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground">
+                        <ImageUp className="size-4" />
+                        {uploadingImageId === product.id ? '업로드 중' : '사진 등록'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          disabled={uploadingImageId === product.id}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            event.target.value = '';
+                            if (!file) return;
+                            void uploadProductImage(product.id, file);
+                          }}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1.5 block text-xs text-foreground/45">
+                          이미지 URL
+                        </span>
+                        <input
+                          value={product.image}
+                          onChange={(event) =>
+                            updateProduct(product.id, {
+                              image: event.target.value,
+                            })
+                          }
+                          className="w-full truncate border-b border-foreground/20 bg-transparent py-1.5 text-xs text-foreground/55 outline-none focus:border-foreground"
+                        />
+                      </label>
+                    </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <label className="block">
                         <span className="mb-2 block text-sm text-foreground/60">
@@ -599,36 +631,6 @@ export default function AdminDashboard() {
                           }
                           rows={3}
                           className="w-full resize-none border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground"
-                        />
-                      </label>
-                      <label className="block">
-                        <span className="mb-2 block text-sm text-foreground/60">
-                          이미지 경로
-                        </span>
-                        <input
-                          value={product.image}
-                          onChange={(event) =>
-                            updateProduct(product.id, {
-                              image: event.target.value,
-                            })
-                          }
-                          className="w-full border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground"
-                        />
-                      </label>
-                      <label className="inline-flex cursor-pointer items-center justify-center gap-2 self-end border border-foreground/15 px-3 py-2 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground">
-                        <ImageUp className="size-4" />
-                        {uploadingImageId === product.id ? '업로드 중' : '사진 등록'}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="sr-only"
-                          disabled={uploadingImageId === product.id}
-                          onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            event.target.value = '';
-                            if (!file) return;
-                            void uploadProductImage(product.id, file);
-                          }}
                         />
                       </label>
                       <label className="block">
@@ -755,12 +757,46 @@ export default function AdminDashboard() {
                   key={workshopClass.id}
                   className="border border-foreground/10 bg-card/60 p-5"
                 >
-                  <div className="grid gap-5 lg:grid-cols-[180px_minmax(0,1fr)]">
-                    <img
-                      src={workshopClass.image}
-                      alt={workshopClass.name}
-                      className="aspect-[4/5] w-full bg-secondary object-cover"
-                    />
+                  <div className="grid gap-5 lg:grid-cols-[220px_minmax(0,1fr)]">
+                    <div className="space-y-3">
+                      <img
+                        src={workshopClass.image}
+                        alt={workshopClass.name}
+                        className="aspect-[4/5] w-full border border-foreground/10 bg-secondary object-cover"
+                      />
+                      <label className="flex cursor-pointer items-center justify-center gap-2 border border-foreground/15 px-3 py-2.5 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground">
+                        <ImageUp className="size-4" />
+                        {uploadingImageId === workshopClass.id
+                          ? '업로드 중'
+                          : '사진 등록'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          disabled={uploadingImageId === workshopClass.id}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            event.target.value = '';
+                            if (!file) return;
+                            void uploadClassImage(workshopClass.id, file);
+                          }}
+                        />
+                      </label>
+                      <label className="block">
+                        <span className="mb-1.5 block text-xs text-foreground/45">
+                          이미지 URL
+                        </span>
+                        <input
+                          value={workshopClass.image}
+                          onChange={(event) =>
+                            updateClass(workshopClass.id, {
+                              image: event.target.value,
+                            })
+                          }
+                          className="w-full truncate border-b border-foreground/20 bg-transparent py-1.5 text-xs text-foreground/55 outline-none focus:border-foreground"
+                        />
+                      </label>
+                    </div>
                     <div className="grid gap-4 md:grid-cols-2">
                       <label>
                         <span className="mb-2 block text-sm text-foreground/60">
@@ -804,38 +840,6 @@ export default function AdminDashboard() {
                           }
                           rows={3}
                           className="w-full resize-none border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground"
-                        />
-                      </label>
-                      <label>
-                        <span className="mb-2 block text-sm text-foreground/60">
-                          이미지 경로
-                        </span>
-                        <input
-                          value={workshopClass.image}
-                          onChange={(event) =>
-                            updateClass(workshopClass.id, {
-                              image: event.target.value,
-                            })
-                          }
-                          className="w-full border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground"
-                        />
-                      </label>
-                      <label className="inline-flex cursor-pointer items-center justify-center gap-2 self-end border border-foreground/15 px-3 py-2 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground">
-                        <ImageUp className="size-4" />
-                        {uploadingImageId === workshopClass.id
-                          ? '업로드 중'
-                          : '사진 등록'}
-                        <input
-                          type="file"
-                          accept="image/*"
-                          className="sr-only"
-                          disabled={uploadingImageId === workshopClass.id}
-                          onChange={(event) => {
-                            const file = event.target.files?.[0];
-                            event.target.value = '';
-                            if (!file) return;
-                            void uploadClassImage(workshopClass.id, file);
-                          }}
                         />
                       </label>
                       <label>
