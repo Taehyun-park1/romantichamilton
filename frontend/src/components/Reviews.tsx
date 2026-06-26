@@ -5,6 +5,7 @@ import {
   supabase,
   type WorkshopReview,
 } from '@/lib/supabase';
+import '@/styles/reviews.css';
 
 const fallbackReviews: WorkshopReview[] = [
   {
@@ -44,14 +45,16 @@ const fallbackReviews: WorkshopReview[] = [
 
 function Stars({ rating }: { rating: number }) {
   return (
-    <div className="flex items-center gap-1" aria-label={`${rating}점`}>
+    // old: flex items-center gap-1
+    <div className="review-stars" aria-label={`${rating}점`}>
       {Array.from({ length: 5 }, (_, index) => (
         <Star
           key={index}
-          className={`size-4 ${
+          /* old: size-4 fill-accent text-accent / fill-transparent text-foreground/20 */
+          className={`review-stars__star ${
             index < rating
-              ? 'fill-accent text-accent'
-              : 'fill-transparent text-foreground/20'
+              ? 'review-stars__star--active'
+              : ''
           }`}
         />
       ))}
@@ -91,42 +94,54 @@ export default function Reviews() {
   return (
     <section
       id="reviews"
-      className="scroll-mt-20 bg-[#f4f0ea] py-24 md:scroll-mt-24 md:py-36"
+      /* old: scroll-mt-20 bg-[#f4f0ea] py-24 md:scroll-mt-24 md:py-36 */
+      className="reviews-section"
     >
-      <div className="container">
-        <div className="mb-12 flex flex-col gap-4 md:mb-16 md:flex-row md:items-end md:justify-between">
+      {/* old: container */}
+      <div className="reviews-section__inner">
+        {/* old: mb-12 flex flex-col gap-4 md:mb-16 md:flex-row md:items-end md:justify-between */}
+        <div className="reviews-section__header">
           <div>
-            <p className="mb-3 text-xs uppercase tracking-[0.16em] text-accent">
+            {/* old: mb-3 text-xs uppercase tracking-[0.16em] text-accent */}
+            <p className="reviews-section__eyebrow">
               Reviews
             </p>
-            <h2 className="text-3xl font-semibold text-foreground md:text-5xl">
+            {/* old: text-3xl font-semibold text-foreground md:text-5xl */}
+            <h2 className="reviews-section__title">
               손님들이 남긴 이야기
             </h2>
           </div>
-          <p className="max-w-sm text-sm leading-relaxed text-foreground/60">
+          {/* old: max-w-sm text-sm leading-relaxed text-foreground/60 */}
+          <p className="reviews-section__description">
             클래스와 제품 경험을 바탕으로 남겨주신 리뷰입니다. 확인된 리뷰만
             게시됩니다.
           </p>
         </div>
 
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        {/* old: grid gap-4 md:grid-cols-2 lg:grid-cols-3 */}
+        <div className="reviews-section__grid">
           {reviews.map((review) => (
             <article
               key={review.id}
-              className="border border-foreground/10 bg-background p-5"
+              /* old: border border-foreground/10 bg-background p-5 */
+              className="reviews-section__card"
             >
-              <div className="mb-4 flex items-start justify-between gap-4">
+              {/* old: mb-4 flex items-start justify-between gap-4 */}
+              <div className="reviews-section__card-head">
                 <div>
-                  <h3 className="text-base font-semibold text-foreground">
+                  {/* old: text-base font-semibold text-foreground */}
+                  <h3 className="reviews-section__card-title">
                     {review.title}
                   </h3>
-                  <p className="mt-1 text-sm text-foreground/50">
+                  {/* old: mt-1 text-sm text-foreground/50 */}
+                  <p className="reviews-section__name">
                     {review.display_name}
                   </p>
                 </div>
                 <Stars rating={review.rating} />
               </div>
-              <p className="text-sm leading-relaxed text-foreground/70">
+              {/* old: text-sm leading-relaxed text-foreground/70 */}
+              <p className="reviews-section__content">
                 {review.content}
               </p>
             </article>

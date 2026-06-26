@@ -3,6 +3,7 @@ import { Star } from 'lucide-react';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import '@/styles/review-write.css';
 
 type InviteStatus = 'loading' | 'valid' | 'invalid' | 'used' | 'expired' | 'submitted';
 type ReviewType = 'class' | 'product' | 'other';
@@ -145,45 +146,55 @@ export default function ReviewWritePage() {
   return (
     <>
       <Header />
-      <main className="min-h-screen bg-background pt-24 md:pt-28">
-        <section className="container max-w-3xl pb-32 pt-10 md:pt-16">
-          <p className="mb-3 text-xs uppercase tracking-[0.16em] text-accent">
+      {/* old: min-h-screen bg-background pt-24 md:pt-28 */}
+      <main className="review-write">
+        {/* old: container max-w-3xl pb-32 pt-10 md:pt-16 */}
+        <section className="review-write__section">
+          {/* old: mb-3 text-xs uppercase tracking-[0.16em] text-accent */}
+          <p className="review-write__eyebrow">
             Review
           </p>
-          <h1 className="mb-4 text-3xl font-semibold text-foreground md:text-5xl">
+          {/* old: mb-4 text-3xl font-semibold text-foreground md:text-5xl */}
+          <h1 className="review-write__title">
             리뷰 작성
           </h1>
-          <p className="mb-10 max-w-xl text-sm leading-relaxed text-foreground/60">
+          {/* old: mb-10 max-w-xl text-sm leading-relaxed text-foreground/60 */}
+          <p className="review-write__intro">
             전달받은 리뷰 링크로만 작성할 수 있습니다. 작성한 리뷰는 관리자
             확인 후 메인 화면에 게시됩니다.
           </p>
 
           {status === 'loading' && (
-            <p className="border border-foreground/10 p-6 text-sm text-foreground/55">
+            // old: border border-foreground/10 p-6 text-sm text-foreground/55
+            <p className="review-write__message">
               리뷰 링크를 확인하는 중입니다.
             </p>
           )}
 
           {status === 'invalid' && (
-            <p className="border border-foreground/10 p-6 text-sm text-foreground/55">
+            // old: border border-foreground/10 p-6 text-sm text-foreground/55
+            <p className="review-write__message">
               유효하지 않은 리뷰 링크입니다.
             </p>
           )}
 
           {status === 'used' && (
-            <p className="border border-foreground/10 p-6 text-sm text-foreground/55">
+            // old: border border-foreground/10 p-6 text-sm text-foreground/55
+            <p className="review-write__message">
               이미 사용된 리뷰 링크입니다.
             </p>
           )}
 
           {status === 'expired' && (
-            <p className="border border-foreground/10 p-6 text-sm text-foreground/55">
+            // old: border border-foreground/10 p-6 text-sm text-foreground/55
+            <p className="review-write__message">
               만료된 리뷰 링크입니다.
             </p>
           )}
 
           {status === 'submitted' && (
-            <p className="border border-foreground/10 p-6 text-sm text-foreground/55">
+            // old: border border-foreground/10 p-6 text-sm text-foreground/55
+            <p className="review-write__message">
               리뷰가 접수되었습니다. 감사합니다.
             </p>
           )}
@@ -191,46 +202,59 @@ export default function ReviewWritePage() {
           {status === 'valid' && invite && (
             <form
               onSubmit={handleSubmit}
-              className="border border-foreground/10 bg-card/60 p-5 md:p-7"
+              /* old: border border-foreground/10 bg-card/60 p-5 md:p-7 */
+              className="review-write__form"
             >
-              <div className="mb-8 border-b border-foreground/10 pb-5">
-                <p className="mb-2 text-xs uppercase tracking-[0.16em] text-accent">
+              {/* old: mb-8 border-b border-foreground/10 pb-5 */}
+              <div className="review-write__summary">
+                {/* old: mb-2 text-xs uppercase tracking-[0.16em] text-accent */}
+                <p className="review-write__type">
                   {reviewTypeLabels[invite.review_type]}
                 </p>
-                <h2 className="text-2xl font-semibold text-foreground">
+                {/* old: text-2xl font-semibold text-foreground */}
+                <h2 className="review-write__target">
                   {targetName}
                 </h2>
               </div>
 
-              <div className="space-y-6">
-                <label className="block">
-                  <span className="mb-2 block text-sm text-foreground/60">
+              {/* old: space-y-6 */}
+              <div className="review-write__fields">
+                {/* old: block */}
+                <label className="review-write__field">
+                  {/* old: mb-2 block text-sm text-foreground/60 */}
+                  <span className="review-write__label">
                     작성자 이름
                   </span>
                   <input
                     value={displayName}
                     onChange={(event) => setDisplayName(event.target.value)}
                     maxLength={40}
-                    className="w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground"
+                    /* old: w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground */
+                    className="review-write__input"
                   />
                 </label>
 
-                <label className="block">
-                  <span className="mb-2 block text-sm text-foreground/60">
+                {/* old: block */}
+                <label className="review-write__field">
+                  {/* old: mb-2 block text-sm text-foreground/60 */}
+                  <span className="review-write__label">
                     평점
                   </span>
-                  <div className="flex gap-2">
+                  {/* old: flex gap-2 */}
+                  <div className="review-write__stars">
                     {[1, 2, 3, 4, 5].map((score) => (
                       <button
                         key={score}
                         type="button"
                         onClick={() => setRating(score)}
-                        className="p-1 text-accent"
+                        /* old: p-1 text-accent */
+                        className="review-write__star-button"
                         aria-label={`${score}점`}
                       >
                         <Star
-                          className={`size-6 ${
-                            score <= rating ? 'fill-accent' : 'fill-transparent'
+                          /* old: size-6 fill-accent/fill-transparent */
+                          className={`review-write__star ${
+                            score <= rating ? 'review-write__star--active' : ''
                           }`}
                         />
                       </button>
@@ -238,21 +262,26 @@ export default function ReviewWritePage() {
                   </div>
                 </label>
 
-                <label className="block">
-                  <span className="mb-2 block text-sm text-foreground/60">
+                {/* old: block */}
+                <label className="review-write__field">
+                  {/* old: mb-2 block text-sm text-foreground/60 */}
+                  <span className="review-write__label">
                     제목
                   </span>
                   <input
                     value={title}
                     onChange={(event) => setTitle(event.target.value)}
                     maxLength={80}
-                    className="w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground"
+                    /* old: w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground */
+                    className="review-write__input"
                     placeholder="짧은 한 줄 후기를 적어주세요"
                   />
                 </label>
 
-                <label className="block">
-                  <span className="mb-2 block text-sm text-foreground/60">
+                {/* old: block */}
+                <label className="review-write__field">
+                  {/* old: mb-2 block text-sm text-foreground/60 */}
+                  <span className="review-write__label">
                     내용
                   </span>
                   <textarea
@@ -260,7 +289,8 @@ export default function ReviewWritePage() {
                     onChange={(event) => setContent(event.target.value)}
                     rows={7}
                     maxLength={1000}
-                    className="w-full resize-none border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground"
+                    /* old: w-full resize-none border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground */
+                    className="review-write__textarea"
                     placeholder="제품이나 클래스 경험을 남겨주세요"
                   />
                 </label>
@@ -268,7 +298,8 @@ export default function ReviewWritePage() {
                 <button
                   type="submit"
                   disabled={submitting}
-                  className="btn-primary w-full disabled:opacity-50"
+                  /* old: btn-primary w-full disabled:opacity-50 */
+                  className="btn-primary review-write__submit"
                 >
                   {submitting ? '접수 중' : '리뷰 등록'}
                 </button>

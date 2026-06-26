@@ -1,0 +1,63 @@
+@reference "../index.css";
+
+@layer components {
+  .contact-section {
+    @apply scroll-mt-20 bg-[#f4f0ea] py-24 md:scroll-mt-24 md:py-36;
+  }
+
+  .contact-section__inner {
+    @apply container;
+  }
+
+  .contact-section__grid {
+    @apply grid grid-cols-1 gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20;
+  }
+
+  .contact-section__eyebrow {
+    @apply mb-3 text-xs uppercase tracking-[0.16em] text-accent;
+  }
+
+  .contact-section__title {
+    @apply mb-8 text-3xl font-semibold text-foreground md:text-5xl;
+  }
+
+  .contact-section__info-list {
+    @apply space-y-7;
+  }
+
+  .contact-section__info-label {
+    @apply mb-2 text-xs font-normal uppercase tracking-[0.14em] text-foreground/50;
+  }
+
+  .contact-section__info-link {
+    @apply text-lg text-foreground transition-colors hover:text-accent;
+  }
+
+  .contact-section__hours {
+    @apply text-lg text-foreground;
+  }
+
+  .contact-form {
+    @apply space-y-7;
+  }
+
+  .contact-form__label {
+    @apply mb-2 block text-sm font-normal text-foreground/60;
+  }
+
+  .contact-form__input {
+    @apply w-full border-b border-foreground/20 bg-transparent px-0 py-3 text-foreground transition-colors focus:border-foreground focus:outline-none;
+  }
+
+  .contact-form__textarea {
+    @apply w-full resize-none border-b border-foreground/20 bg-transparent px-0 py-3 text-foreground transition-colors focus:border-foreground focus:outline-none;
+  }
+
+  .contact-form__two-column {
+    @apply grid gap-7 md:grid-cols-2;
+  }
+
+  .contact-form__honeypot {
+    @apply hidden;
+  }
+}

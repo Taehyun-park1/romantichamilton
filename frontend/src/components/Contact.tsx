@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import { useAuth } from '@/contexts/AuthContext';
+import '@/styles/contact.css';
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)
   ?.replace(/\/+$/, '');
@@ -96,46 +97,58 @@ export default function Contact() {
   return (
     <section
       id="contact"
-      className="scroll-mt-20 bg-[#f4f0ea] py-24 md:scroll-mt-24 md:py-36"
+      /* old: scroll-mt-20 bg-[#f4f0ea] py-24 md:scroll-mt-24 md:py-36 */
+      className="contact-section"
     >
-      <div className="container">
-        <div className="grid grid-cols-1 gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20">
+      {/* old: container */}
+      <div className="contact-section__inner">
+        {/* old: grid grid-cols-1 gap-12 lg:grid-cols-[0.8fr_1.2fr] lg:gap-20 */}
+        <div className="contact-section__grid">
           <div>
-            <p className="mb-3 text-xs uppercase tracking-[0.16em] text-accent">
+            {/* old: mb-3 text-xs uppercase tracking-[0.16em] text-accent */}
+            <p className="contact-section__eyebrow">
               Contact
             </p>
-            <h2 className="mb-8 text-3xl font-semibold text-foreground md:text-5xl">
+            {/* old: mb-8 text-3xl font-semibold text-foreground md:text-5xl */}
+            <h2 className="contact-section__title">
               제작 문의
             </h2>
 
-            <div className="space-y-7">
+            {/* old: space-y-7 */}
+            <div className="contact-section__info-list">
               <div>
-                <h3 className="mb-2 text-xs font-normal uppercase tracking-[0.14em] text-foreground/50">
+                {/* old: mb-2 text-xs font-normal uppercase tracking-[0.14em] text-foreground/50 */}
+                <h3 className="contact-section__info-label">
                   Phone
                 </h3>
                 <a
                   href="tel:+821012345678"
-                  className="text-lg text-foreground transition-colors hover:text-accent"
+                  /* old: text-lg text-foreground transition-colors hover:text-accent */
+                  className="contact-section__info-link"
                 >
                   +82 10-1234-5678
                 </a>
               </div>
               <div>
-                <h3 className="mb-2 text-xs font-normal uppercase tracking-[0.14em] text-foreground/50">
+                {/* old: mb-2 text-xs font-normal uppercase tracking-[0.14em] text-foreground/50 */}
+                <h3 className="contact-section__info-label">
                   Email
                 </h3>
                 <a
                   href="mailto:hello@romantichamilton.com"
-                  className="text-lg text-foreground transition-colors hover:text-accent"
+                  /* old: text-lg text-foreground transition-colors hover:text-accent */
+                  className="contact-section__info-link"
                 >
                   hello@romantichamilton.com
                 </a>
               </div>
               <div>
-                <h3 className="mb-2 text-xs font-normal uppercase tracking-[0.14em] text-foreground/50">
+                {/* old: mb-2 text-xs font-normal uppercase tracking-[0.14em] text-foreground/50 */}
+                <h3 className="contact-section__info-label">
                   Hours
                 </h3>
-                <p className="text-lg text-foreground">
+                {/* old: text-lg text-foreground */}
+                <p className="contact-section__hours">
                   평일 10:00 - 18:00
                   <br />
                   토요일 11:00 - 17:00
@@ -144,11 +157,13 @@ export default function Contact() {
             </div>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-7">
+          {/* old: space-y-7 */}
+          <form onSubmit={handleSubmit} className="contact-form">
             <div>
               <label
                 htmlFor="contact-name"
-                className="mb-2 block text-sm font-normal text-foreground/60"
+                /* old: mb-2 block text-sm font-normal text-foreground/60 */
+                className="contact-form__label"
               >
                 이름
               </label>
@@ -161,16 +176,19 @@ export default function Contact() {
                 autoComplete="name"
                 maxLength={60}
                 required
-                className="w-full border-b border-foreground/20 bg-transparent px-0 py-3 text-foreground transition-colors focus:border-foreground focus:outline-none"
+                /* old: w-full border-b border-foreground/20 bg-transparent px-0 py-3 text-foreground transition-colors focus:border-foreground focus:outline-none */
+                className="contact-form__input"
                 placeholder="성함을 입력해 주세요"
               />
             </div>
 
-            <div className="grid gap-7 md:grid-cols-2">
+            {/* old: grid gap-7 md:grid-cols-2 */}
+            <div className="contact-form__two-column">
               <div>
                 <label
                   htmlFor="contact-phone"
-                  className="mb-2 block text-sm font-normal text-foreground/60"
+                  /* old: mb-2 block text-sm font-normal text-foreground/60 */
+                  className="contact-form__label"
                 >
                   연락처
                 </label>
@@ -183,7 +201,8 @@ export default function Contact() {
                   autoComplete="tel"
                   maxLength={30}
                   required
-                  className="w-full border-b border-foreground/20 bg-transparent px-0 py-3 text-foreground transition-colors focus:border-foreground focus:outline-none"
+                  /* old: w-full border-b border-foreground/20 bg-transparent px-0 py-3 text-foreground transition-colors focus:border-foreground focus:outline-none */
+                  className="contact-form__input"
                   placeholder="010-1234-5678"
                 />
               </div>
@@ -191,7 +210,8 @@ export default function Contact() {
               <div>
                 <label
                   htmlFor="contact-email"
-                  className="mb-2 block text-sm font-normal text-foreground/60"
+                  /* old: mb-2 block text-sm font-normal text-foreground/60 */
+                  className="contact-form__label"
                 >
                   이메일
                 </label>
@@ -204,7 +224,8 @@ export default function Contact() {
                   autoComplete="email"
                   maxLength={254}
                   required
-                  className="w-full border-b border-foreground/20 bg-transparent px-0 py-3 text-foreground transition-colors focus:border-foreground focus:outline-none"
+                  /* old: w-full border-b border-foreground/20 bg-transparent px-0 py-3 text-foreground transition-colors focus:border-foreground focus:outline-none */
+                  className="contact-form__input"
                   placeholder="name@example.com"
                 />
               </div>
@@ -213,7 +234,8 @@ export default function Contact() {
             <div>
               <label
                 htmlFor="contact-message"
-                className="mb-2 block text-sm font-normal text-foreground/60"
+                /* old: mb-2 block text-sm font-normal text-foreground/60 */
+                className="contact-form__label"
               >
                 문의 내용
               </label>
@@ -226,12 +248,14 @@ export default function Contact() {
                 minLength={10}
                 maxLength={3000}
                 required
-                className="w-full resize-none border-b border-foreground/20 bg-transparent px-0 py-3 text-foreground transition-colors focus:border-foreground focus:outline-none"
+                /* old: w-full resize-none border-b border-foreground/20 bg-transparent px-0 py-3 text-foreground transition-colors focus:border-foreground focus:outline-none */
+                className="contact-form__textarea"
                 placeholder="원하시는 제품, 색상, 각인 여부 등을 적어 주세요"
               />
             </div>
 
-            <div className="hidden" aria-hidden="true">
+            {/* old: hidden */}
+            <div className="contact-form__honeypot" aria-hidden="true">
               <label htmlFor="contact-website">Website</label>
               <input
                 type="text"

@@ -1,0 +1,83 @@
+@reference "../index.css";
+
+@layer components {
+  .auth-page {
+    @apply min-h-screen bg-background pt-24 md:pt-28;
+  }
+
+  .auth-page__section {
+    @apply container py-16 md:py-24;
+  }
+
+  .auth-page__panel {
+    @apply mx-auto max-w-md;
+  }
+
+  .auth-page__eyebrow {
+    @apply mb-3 text-xs uppercase tracking-[0.16em] text-accent;
+  }
+
+  .auth-page__title {
+    @apply mb-4 text-3xl font-semibold text-foreground md:text-4xl;
+  }
+
+  .auth-page__intro {
+    @apply mb-10 text-sm leading-relaxed text-foreground/60;
+  }
+
+  .auth-page__mode-tabs {
+    @apply mb-8 grid grid-cols-2 gap-2;
+  }
+
+  .auth-page__mode-button {
+    @apply border px-4 py-3 text-sm transition-colors;
+  }
+
+  .auth-page__mode-button--active {
+    @apply border-foreground bg-foreground text-background;
+  }
+
+  .auth-page__mode-button--inactive {
+    @apply border-foreground/15 text-foreground/65 hover:text-foreground;
+  }
+
+  .auth-form {
+    @apply space-y-6;
+  }
+
+  .auth-form__label {
+    @apply mb-2 block text-sm text-foreground/60;
+  }
+
+  .auth-form__input {
+    @apply w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground;
+  }
+
+  .auth-form__submit {
+    @apply w-full;
+  }
+
+  .auth-page__divider {
+    @apply my-8 flex items-center gap-4;
+  }
+
+  .auth-page__divider-line {
+    @apply h-px flex-1 bg-foreground/10;
+  }
+
+  .auth-page__divider-label {
+    @apply text-xs text-foreground/45;
+  }
+
+  .auth-page__socials {
+    @apply space-y-3;
+  }
+
+  .auth-page__kakao {
+    @apply w-full bg-[#FEE500] px-4 py-3 text-sm font-medium text-[#191919];
+  }
+
+  .auth-page__naver {
+    @apply w-full bg-[#03C75A] px-4 py-3 text-sm font-medium text-white;
+  }
+}

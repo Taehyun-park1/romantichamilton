@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
+import '@/styles/auth.css';
 
 type AuthMode = 'login' | 'signup';
 
@@ -122,27 +123,35 @@ export default function AuthPage() {
   };
 
   return (
-    <main className="min-h-screen bg-background pt-24 md:pt-28">
-      <section className="container py-16 md:py-24">
-        <div className="mx-auto max-w-md">
-          <p className="mb-3 text-xs uppercase tracking-[0.16em] text-accent">
+    // old: min-h-screen bg-background pt-24 md:pt-28
+    <main className="auth-page">
+      {/* old: container py-16 md:py-24 */}
+      <section className="auth-page__section">
+        {/* old: mx-auto max-w-md */}
+        <div className="auth-page__panel">
+          {/* old: mb-3 text-xs uppercase tracking-[0.16em] text-accent */}
+          <p className="auth-page__eyebrow">
             Account
           </p>
-          <h1 className="mb-4 text-3xl md:text-4xl font-semibold text-foreground">
+          {/* old: mb-4 text-3xl md:text-4xl font-semibold text-foreground */}
+          <h1 className="auth-page__title">
             {mode === 'login' ? '로그인' : '이메일 회원가입'}
           </h1>
-          <p className="mb-10 text-sm leading-relaxed text-foreground/60">
+          {/* old: mb-10 text-sm leading-relaxed text-foreground/60 */}
+          <p className="auth-page__intro">
             문의는 로그인 없이 이메일로 보낼 수 있습니다. 로그인하면 클래스 예약을 신청하고 내 예약 내역을 확인할 수 있습니다.
           </p>
 
-          <div className="mb-8 grid grid-cols-2 gap-2">
+          {/* old: mb-8 grid grid-cols-2 gap-2 */}
+          <div className="auth-page__mode-tabs">
             <button
               type="button"
               onClick={() => setMode('login')}
-              className={`border px-4 py-3 text-sm transition-colors ${
+              /* old: border px-4 py-3 text-sm transition-colors + active/inactive */
+              className={`auth-page__mode-button ${
                 mode === 'login'
-                  ? 'border-foreground bg-foreground text-background'
-                  : 'border-foreground/15 text-foreground/65 hover:text-foreground'
+                  ? 'auth-page__mode-button--active'
+                  : 'auth-page__mode-button--inactive'
               }`}
             >
               로그인
@@ -150,34 +159,39 @@ export default function AuthPage() {
             <button
               type="button"
               onClick={() => setMode('signup')}
-              className={`border px-4 py-3 text-sm transition-colors ${
+              /* old: border px-4 py-3 text-sm transition-colors + active/inactive */
+              className={`auth-page__mode-button ${
                 mode === 'signup'
-                  ? 'border-foreground bg-foreground text-background'
-                  : 'border-foreground/15 text-foreground/65 hover:text-foreground'
+                  ? 'auth-page__mode-button--active'
+                  : 'auth-page__mode-button--inactive'
               }`}
             >
               회원가입
             </button>
           </div>
 
-          <form onSubmit={handleEmailAuth} className="space-y-6">
+          {/* old: space-y-6 */}
+          <form onSubmit={handleEmailAuth} className="auth-form">
             {mode === 'signup' && (
               <>
                 <div>
-                  <label htmlFor="displayName" className="mb-2 block text-sm text-foreground/60">
+                  {/* old: mb-2 block text-sm text-foreground/60 */}
+                  <label htmlFor="displayName" className="auth-form__label">
                     이름 또는 닉네임
                   </label>
                   <input
                     id="displayName"
                     value={displayName}
                     onChange={(event) => setDisplayName(event.target.value)}
-                    className="w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground"
+                    /* old: w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground */
+                    className="auth-form__input"
                     placeholder="표시할 이름"
                   />
                 </div>
 
                 <div>
-                  <label htmlFor="signupPhone" className="mb-2 block text-sm text-foreground/60">
+                  {/* old: mb-2 block text-sm text-foreground/60 */}
+                  <label htmlFor="signupPhone" className="auth-form__label">
                     전화번호 선택
                   </label>
                   <input
@@ -187,7 +201,8 @@ export default function AuthPage() {
                     onChange={(event) =>
                       setPhone(normalizePhoneNumber(event.target.value))
                     }
-                    className="w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground"
+                    /* old: w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground */
+                    className="auth-form__input"
                     placeholder="010-1234-5678"
                   />
                 </div>
@@ -195,7 +210,8 @@ export default function AuthPage() {
             )}
 
             <div>
-              <label htmlFor="email" className="mb-2 block text-sm text-foreground/60">
+              {/* old: mb-2 block text-sm text-foreground/60 */}
+              <label htmlFor="email" className="auth-form__label">
                 이메일
               </label>
               <input
@@ -203,13 +219,15 @@ export default function AuthPage() {
                 type="email"
                 value={email}
                 onChange={(event) => setEmail(event.target.value)}
-                className="w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground"
+                /* old: w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground */
+                className="auth-form__input"
                 placeholder="you@example.com"
               />
             </div>
 
             <div>
-              <label htmlFor="password" className="mb-2 block text-sm text-foreground/60">
+              {/* old: mb-2 block text-sm text-foreground/60 */}
+              <label htmlFor="password" className="auth-form__label">
                 비밀번호
               </label>
               <input
@@ -217,34 +235,47 @@ export default function AuthPage() {
                 type="password"
                 value={password}
                 onChange={(event) => setPassword(event.target.value)}
-                className="w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground"
+                /* old: w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground */
+                className="auth-form__input"
                 placeholder="비밀번호"
               />
             </div>
 
-            <button type="submit" disabled={submitting} className="btn-primary w-full">
+            <button
+              type="submit"
+              disabled={submitting}
+              /* old: btn-primary w-full */
+              className="btn-primary auth-form__submit"
+            >
               {submitting ? '처리 중' : mode === 'login' ? '이메일 로그인' : '회원가입'}
             </button>
           </form>
 
-          <div className="my-8 flex items-center gap-4">
-            <div className="h-px flex-1 bg-foreground/10" />
-            <span className="text-xs text-foreground/45">또는</span>
-            <div className="h-px flex-1 bg-foreground/10" />
+          {/* old: my-8 flex items-center gap-4 */}
+          <div className="auth-page__divider">
+            {/* old: h-px flex-1 bg-foreground/10 */}
+            <div className="auth-page__divider-line" />
+            {/* old: text-xs text-foreground/45 */}
+            <span className="auth-page__divider-label">또는</span>
+            {/* old: h-px flex-1 bg-foreground/10 */}
+            <div className="auth-page__divider-line" />
           </div>
 
-          <div className="space-y-3">
+          {/* old: space-y-3 */}
+          <div className="auth-page__socials">
             <button
               type="button"
               onClick={handleKakaoLogin}
-              className="w-full bg-[#FEE500] px-4 py-3 text-sm font-medium text-[#191919]"
+              /* old: w-full bg-[#FEE500] px-4 py-3 text-sm font-medium text-[#191919] */
+              className="auth-page__kakao"
             >
               카카오로 계속하기
             </button>
             <button
               type="button"
               onClick={handleNaverLogin}
-              className="w-full bg-[#03C75A] px-4 py-3 text-sm font-medium text-white"
+              /* old: w-full bg-[#03C75A] px-4 py-3 text-sm font-medium text-white */
+              className="auth-page__naver"
             >
               네이버로 계속하기
             </button>
