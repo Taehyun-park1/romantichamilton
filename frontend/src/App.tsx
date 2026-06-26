@@ -11,6 +11,7 @@ import AuthPage from "./pages/AuthPage";
 import Home from "./pages/Home";
 import MyPage from "./pages/MyPage";
 import ReservationPage from "./pages/ReservationPage";
+import ReviewsPage from "./pages/ReviewsPage";
 import ReviewWritePage from "./pages/ReviewWritePage";
 
 
@@ -20,6 +21,7 @@ function Router() {
       <Route path={"/"} component={Home} />
       <Route path={"/auth"} component={AuthPage} />
       <Route path={"/reserve"} component={ReservationPage} />
+      <Route path={"/reviews"} component={ReviewsPage} />
       <Route path={"/review/write/:reviewType"} component={ReviewWritePage} />
       <Route path={"/review/write"} component={ReviewWritePage} />
       <Route path={"/my"} component={MyPage} />

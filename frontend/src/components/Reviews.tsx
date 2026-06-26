@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
+import { Link } from "wouter";
 import {
   isSupabaseConfigured,
   supabase,
@@ -7,7 +8,7 @@ import {
 } from "@/lib/supabase";
 import "@/styles/reviews.css";
 
-const fallbackReviews: WorkshopReview[] = [
+export const fallbackReviews: WorkshopReview[] = [
   {
     id: "fallback-1",
     user_id: null,
@@ -43,7 +44,7 @@ const fallbackReviews: WorkshopReview[] = [
   },
 ];
 
-function Stars({ rating }: { rating: number }) {
+export function ReviewStars({ rating }: { rating: number }) {
   return (
     // old: flex items-center gap-1
     <div className="review-stars" aria-label={`${rating}점`}>
@@ -57,6 +58,29 @@ function Stars({ rating }: { rating: number }) {
         />
       ))}
     </div>
+  );
+}
+
+export function ReviewCard({ review }: { review: WorkshopReview }) {
+  return (
+    <article
+      key={review.id}
+      /* old: border border-foreground/10 bg-background p-5 */
+      className="reviews-section__card"
+    >
+      {/* old: mb-4 flex items-start justify-between gap-4 */}
+      <div className="reviews-section__card-head">
+        <div>
+          {/* old: text-base font-semibold text-foreground */}
+          <h3 className="reviews-section__card-title">{review.title}</h3>
+          {/* old: mt-1 text-sm text-foreground/50 */}
+          <p className="reviews-section__name">{review.display_name}</p>
+        </div>
+        <ReviewStars rating={review.rating} />
+      </div>
+      {/* old: text-sm leading-relaxed text-foreground/70 */}
+      <p className="reviews-section__content">{review.content}</p>
+    </article>
   );
 }
 
@@ -105,37 +129,15 @@ export default function Reviews() {
             {/* old: text-3xl font-semibold text-foreground md:text-5xl */}
             <h2 className="reviews-section__title">손님들이 남긴 이야기</h2>
           </div>
-          {/* old: max-w-sm text-sm leading-relaxed text-foreground/60 
-          <p className="reviews-section__description">
-            클래스와 제품 경험을 바탕으로 남겨주신 리뷰입니다. 확인된 리뷰만
-            게시됩니다.
-          </p>
-          */}
+          <Link href="/reviews" className="btn-outline reviews-section__more">
+            전체 리뷰 보기
+          </Link>
         </div>
 
         {/* old: grid gap-4 md:grid-cols-2 lg:grid-cols-3 */}
         <div className="reviews-section__grid">
-          {reviews.map(review => (
-            <article
-              key={review.id}
-              /* old: border border-foreground/10 bg-background p-5 */
-              className="reviews-section__card"
-            >
-              {/* old: mb-4 flex items-start justify-between gap-4 */}
-              <div className="reviews-section__card-head">
-                <div>
-                  {/* old: text-base font-semibold text-foreground */}
-                  <h3 className="reviews-section__card-title">
-                    {review.title}
-                  </h3>
-                  {/* old: mt-1 text-sm text-foreground/50 */}
-                  <p className="reviews-section__name">{review.display_name}</p>
-                </div>
-                <Stars rating={review.rating} />
-              </div>
-              {/* old: text-sm leading-relaxed text-foreground/70 */}
-              <p className="reviews-section__content">{review.content}</p>
-            </article>
+          {reviews.map((review) => (
+            <ReviewCard key={review.id} review={review} />
           ))}
         </div>
       </div>

@@ -1,0 +1,52 @@
+@reference "../index.css";
+
+.reviews-page {
+  @apply min-h-screen bg-background pt-24 md:pt-28;
+}
+
+.reviews-page__inner {
+  width: 100%;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
+  padding: 2.5rem 1.5rem 8rem;
+}
+
+@media (min-width: 768px) {
+  .reviews-page__inner {
+    padding-left: 2rem;
+    padding-right: 2rem;
+    padding-top: 3.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .reviews-page__inner {
+    padding-left: 3rem;
+    padding-right: 3rem;
+  }
+}
+
+.reviews-page__header {
+  @apply mb-12 max-w-2xl md:mb-16;
+}
+
+.reviews-page__eyebrow {
+  @apply mb-3 text-xs uppercase tracking-[0.16em] text-accent;
+}
+
+.reviews-page__title {
+  @apply mb-4 text-3xl font-semibold text-foreground md:text-5xl;
+}
+
+.reviews-page__description {
+  @apply text-sm leading-relaxed text-foreground/60 md:text-base;
+}
+
+.reviews-page__message {
+  @apply border border-foreground/10 bg-card/60 p-6 text-sm text-foreground/55;
+}
+
+.reviews-page__grid {
+  @apply grid gap-4 md:grid-cols-2 lg:grid-cols-3;
+}

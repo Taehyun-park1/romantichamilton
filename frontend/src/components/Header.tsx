@@ -140,6 +140,15 @@ export default function Header() {
                   리뷰 작성
                 </Link>
 
+                <Link
+                  href="/reviews"
+                  onClick={closeMenu}
+                  /* old: block px-0 py-2 text-sm text-foreground/60 transition-colors hover:text-foreground md:px-3 */
+                  className="site-header__page-link"
+                >
+                  리뷰 전체
+                </Link>
+
                 {isAdmin && (
                   <Link
                     href="/admin"
