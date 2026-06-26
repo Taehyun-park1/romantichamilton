@@ -326,17 +326,18 @@ function escapeHtml(value: string) {
 async function verifyAdminRequest(req: express.Request) {
   const authorization = req.get("authorization") || "";
   const token = authorization.replace(/^Bearer\s+/i, "");
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  const config = readSupabaseRestConfig();
 
-  if (!token || !supabaseUrl || !anonKey) {
+  if (!token || !config) {
     return false;
   }
 
-  const normalizedSupabaseUrl = supabaseUrl.replace(/\/rest\/v1\/?$/, "").replace(/\/+$/, "");
-  const userResponse = await fetch(`${normalizedSupabaseUrl}/auth/v1/user`, {
+  const userApiKey = config.anonKey || config.serviceRoleKey;
+  if (!userApiKey) return false;
+
+  const userResponse = await fetch(`${config.url}/auth/v1/user`, {
     headers: {
-      apikey: anonKey,
+      apikey: userApiKey,
       Authorization: `Bearer ${token}`,
     },
   });
@@ -346,14 +347,18 @@ async function verifyAdminRequest(req: express.Request) {
   const user = (await userResponse.json()) as { id?: string };
   if (!user.id) return false;
 
+  const profileApiKey = config.serviceRoleKey || config.anonKey;
+  const profileAuthorization = config.serviceRoleKey || token;
+  if (!profileApiKey || !profileAuthorization) return false;
+
   const profileResponse = await fetch(
-    `${normalizedSupabaseUrl}/rest/v1/profiles?id=eq.${encodeURIComponent(
+    `${config.url}/rest/v1/profiles?id=eq.${encodeURIComponent(
       user.id
     )}&select=role&limit=1`,
     {
       headers: {
-        apikey: anonKey,
-        Authorization: `Bearer ${token}`,
+        apikey: profileApiKey,
+        Authorization: `Bearer ${profileAuthorization}`,
       },
     }
   );

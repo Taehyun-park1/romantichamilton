@@ -641,13 +641,29 @@ export default function AdminDashboard() {
       );
 
       if (!response.ok) {
-        throw new Error('reservation_confirmation_email_failed');
+        const payload = (await response.json().catch(() => null)) as {
+          error?: string;
+        } | null;
+        throw new Error(
+          payload?.error || 'reservation_confirmation_email_failed'
+        );
       }
 
       toast.success('예약 확정 메일을 보냈습니다.');
     } catch (emailError) {
       console.error('Reservation confirmation email failed', emailError);
-      toast.error('예약은 확정됐지만 확정 메일 발송에 실패했습니다.');
+      const message =
+        emailError instanceof Error ? emailError.message : '';
+      const errorMessage =
+        message === 'reservation_email_missing'
+          ? '예약자 이메일을 찾지 못해 확정 메일을 보내지 못했습니다.'
+          : message === 'resend_not_configured'
+            ? 'Resend 메일 환경변수가 설정되지 않았습니다.'
+            : message === 'supabase_admin_not_configured'
+              ? 'Supabase 관리자 키가 설정되지 않았습니다.'
+              : '예약은 확정됐지만 확정 메일 발송에 실패했습니다.';
+
+      toast.error(errorMessage);
     }
   };
 
