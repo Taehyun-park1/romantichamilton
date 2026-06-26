@@ -47,6 +47,13 @@ interface ResendErrorResponse {
   name?: string;
 }
 
+interface ValidContactPayload {
+  name: string;
+  phone: string;
+  email: string;
+  message: string;
+}
+
 const CONTACT_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const CONTACT_RATE_LIMIT_MAX_REQUESTS = 5;
 const contactRequestsByIp = new Map<string, number[]>();
@@ -88,6 +95,34 @@ function normalizeText(value: unknown, maxLength: number) {
 
 function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+}
+
+function readSupabaseRestConfig() {
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const apiKey =
+    process.env.SUPABASE_SERVICE_ROLE_KEY ||
+    process.env.SUPABASE_ANON_KEY ||
+    process.env.VITE_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !apiKey) return null;
+
+  return {
+    url: supabaseUrl.replace(/\/rest\/v1\/?$/, "").replace(/\/+$/, ""),
+    apiKey,
+  };
+}
+
+function validateContactPayload(body: ContactRequestBody): ValidContactPayload {
+  const name = normalizeText(body.name, 60);
+  const phone = normalizeText(body.phone, 30);
+  const email = normalizeText(body.email, 254).toLowerCase();
+  const message = normalizeText(body.message, 3000);
+
+  if (!name || !phone || !isValidEmail(email) || message.length < 10) {
+    throw new Error("invalid_contact_payload");
+  }
+
+  return { name, phone, email, message };
 }
 
 function escapeHtml(value: string) {
@@ -168,14 +203,7 @@ function getAllowedOrigins() {
 }
 
 async function sendContactEmail(body: ContactRequestBody) {
-  const name = normalizeText(body.name, 60);
-  const phone = normalizeText(body.phone, 30);
-  const email = normalizeText(body.email, 254).toLowerCase();
-  const message = normalizeText(body.message, 3000);
-
-  if (!name || !phone || !isValidEmail(email) || message.length < 10) {
-    throw new Error("invalid_contact_payload");
-  }
+  const { name, phone, email, message } = validateContactPayload(body);
 
   const resendApiKey = process.env.RESEND_API_KEY;
   const fromEmail =
@@ -226,6 +254,44 @@ async function sendContactEmail(body: ContactRequestBody) {
       message: payload.message,
     });
     throw new Error("resend_send_failed");
+  }
+}
+
+async function saveContactInquiry(
+  body: ContactRequestBody,
+  emailSent: boolean,
+  emailError?: string
+) {
+  const config = readSupabaseRestConfig();
+
+  if (!config) {
+    throw new Error("supabase_rest_not_configured");
+  }
+
+  const payload = validateContactPayload(body);
+  const response = await fetch(`${config.url}/rest/v1/contact_inquiries`, {
+    method: "POST",
+    headers: {
+      apikey: config.apiKey,
+      Authorization: `Bearer ${config.apiKey}`,
+      "Content-Type": "application/json",
+      Prefer: "return=minimal",
+    },
+    body: JSON.stringify({
+      ...payload,
+      status: "new",
+      email_sent: emailSent,
+      email_error: emailError ? emailError.slice(0, 500) : null,
+    }),
+  });
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    console.error("Failed to save contact inquiry", {
+      status: response.status,
+      body: errorText.slice(0, 500),
+    });
+    throw new Error("contact_inquiry_save_failed");
   }
 }
 
@@ -394,7 +460,9 @@ async function startServer() {
     }
 
     try {
+      validateContactPayload(body);
       await sendContactEmail(body);
+      await saveContactInquiry(body, true);
       res.status(200).json({ success: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : "contact_failed";
@@ -402,6 +470,12 @@ async function startServer() {
       if (message === "invalid_contact_payload") {
         res.status(400).json({ error: message });
         return;
+      }
+
+      try {
+        await saveContactInquiry(body, false, message);
+      } catch (saveError) {
+        console.error("Contact inquiry save after failure failed", saveError);
       }
 
       console.error("Contact request failed", { message });

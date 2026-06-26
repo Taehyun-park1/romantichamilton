@@ -5,6 +5,7 @@ import {
   Copy,
   ImageUp,
   Link as LinkIcon,
+  Mail,
   MessageSquareText,
   Package,
   Plus,
@@ -19,6 +20,7 @@ import { products as fallbackProducts, workshops as fallbackWorkshops } from '@/
 import { useAuth } from '@/contexts/AuthContext';
 import {
   type ClassReservation,
+  type ContactInquiry,
   isSupabaseConfigured,
   type Profile,
   type SiteProduct,
@@ -27,7 +29,7 @@ import {
   type WorkshopReview,
 } from '@/lib/supabase';
 
-type AdminTab = 'products' | 'classes' | 'reviews' | 'reservations';
+type AdminTab = 'products' | 'classes' | 'reviews' | 'reservations' | 'inquiries';
 type ReviewDeliveryChannel = 'email' | 'sms';
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)
@@ -45,13 +47,18 @@ const reviewStatusLabels: Record<WorkshopReview['status'], string> = {
   hidden: '숨김',
 };
 
+const inquiryStatusLabels: Record<ContactInquiry['status'], string> = {
+  new: '신규',
+  read: '확인',
+  replied: '답변 완료',
+};
+
 const reviewTypeLabels: Record<
   NonNullable<WorkshopReview['review_type']>,
   string
 > = {
   class: '클래스',
   product: '제품',
-  offline: '오프라인',
   other: '기타',
 };
 
@@ -74,6 +81,9 @@ const statusClassNames = {
   cancelled: 'border-destructive/25 bg-destructive/10 text-destructive',
   approved: 'border-primary/25 bg-primary/10 text-primary',
   hidden: 'border-foreground/20 bg-foreground/5 text-foreground/55',
+  new: 'border-accent/25 bg-accent/10 text-accent',
+  read: 'border-primary/25 bg-primary/10 text-primary',
+  replied: 'border-foreground/20 bg-foreground/5 text-foreground/55',
 };
 
 const ADMIN_IMAGE_BUCKET = 'admin-images';
@@ -178,13 +188,14 @@ export default function AdminDashboard() {
   );
   const [reservations, setReservations] = useState<ClassReservation[]>([]);
   const [reviews, setReviews] = useState<WorkshopReview[]>([]);
+  const [inquiries, setInquiries] = useState<ContactInquiry[]>([]);
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
   const [inviteCustomerName, setInviteCustomerName] = useState('');
   const [inviteReviewType, setInviteReviewType] =
-    useState<NonNullable<WorkshopReview['review_type']>>('offline');
+    useState<NonNullable<WorkshopReview['review_type']>>('other');
   const [inviteProductName, setInviteProductName] = useState('');
   const [inviteClassName, setInviteClassName] = useState('');
   const [generatedReviewUrl, setGeneratedReviewUrl] = useState('');
@@ -211,6 +222,7 @@ export default function AdminDashboard() {
       classResult,
       reservationResult,
       reviewResult,
+      inquiryResult,
       profileResult,
     ] =
       await Promise.all([
@@ -229,6 +241,10 @@ export default function AdminDashboard() {
           .order('created_at', { ascending: false }),
         supabaseClient
           .from('workshop_reviews')
+          .select('*')
+          .order('created_at', { ascending: false }),
+        supabaseClient
+          .from('contact_inquiries')
           .select('*')
           .order('created_at', { ascending: false }),
         supabaseClient
@@ -255,6 +271,12 @@ export default function AdminDashboard() {
       toast.error(reviewResult.error.message);
     } else {
       setReviews((reviewResult.data ?? []) as WorkshopReview[]);
+    }
+
+    if (inquiryResult.error) {
+      toast.error(inquiryResult.error.message);
+    } else {
+      setInquiries((inquiryResult.data ?? []) as ContactInquiry[]);
     }
 
     if (profileResult.error) {
@@ -292,6 +314,11 @@ export default function AdminDashboard() {
   const pendingReviewCount = useMemo(
     () => reviews.filter((review) => review.status === 'pending').length,
     [reviews]
+  );
+
+  const newInquiryCount = useMemo(
+    () => inquiries.filter((inquiry) => inquiry.status === 'new').length,
+    [inquiries]
   );
 
   const updateProduct = (productId: string, patch: Partial<SiteProduct>) => {
@@ -597,6 +624,34 @@ export default function AdminDashboard() {
     toast.success('리뷰 작성자가 변경되었습니다.');
   };
 
+  const updateInquiryStatus = async (
+    inquiryId: string,
+    status: ContactInquiry['status']
+  ) => {
+    if (!supabase) return;
+
+    setUpdatingId(inquiryId);
+
+    const { error } = await supabase
+      .from('contact_inquiries')
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq('id', inquiryId);
+
+    setUpdatingId(null);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    setInquiries((currentInquiries) =>
+      currentInquiries.map((inquiry) =>
+        inquiry.id === inquiryId ? { ...inquiry, status } : inquiry
+      )
+    );
+    toast.success('문의 상태가 변경되었습니다.');
+  };
+
   if (loading || dataLoading) {
     return (
       <>
@@ -636,7 +691,7 @@ export default function AdminDashboard() {
             </button>
           </div>
 
-          <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-4">
+          <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-5">
             <div className="border border-foreground/10 bg-card/60 p-5">
               <div className="mb-4 flex items-center justify-between">
                 <p className="text-sm text-foreground/55">제품</p>
@@ -673,6 +728,15 @@ export default function AdminDashboard() {
                 {pendingReservationCount}
               </p>
             </div>
+            <div className="border border-foreground/10 bg-card/60 p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-sm text-foreground/55">신규 문의</p>
+                <Mail className="size-4 text-accent" />
+              </div>
+              <p className="text-4xl font-semibold text-foreground">
+                {newInquiryCount}
+              </p>
+            </div>
           </div>
 
           <div className="mb-6 flex gap-2 overflow-x-auto border-b border-foreground/10">
@@ -681,6 +745,7 @@ export default function AdminDashboard() {
               ['classes', '클래스 관리'],
               ['reviews', '리뷰 관리'],
               ['reservations', '예약 관리'],
+              ['inquiries', '문의 관리'],
             ].map(([tab, label]) => (
               <button
                 key={tab}
@@ -1375,6 +1440,75 @@ export default function AdminDashboard() {
                           </button>
                         )
                       )}
+                    </div>
+                  </article>
+                ))
+              )}
+            </section>
+          )}
+
+          {activeTab === 'inquiries' && (
+            <section className="space-y-4">
+              {inquiries.length === 0 ? (
+                <p className="border border-foreground/10 p-6 text-sm text-foreground/55">
+                  문의 내역이 없습니다.
+                </p>
+              ) : (
+                inquiries.map((inquiry) => (
+                  <article
+                    key={inquiry.id}
+                    className="border border-foreground/10 bg-card/60 p-5"
+                  >
+                    <div className="mb-4 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
+                      <div>
+                        <p className="mb-2 text-sm text-foreground/55">
+                          {formatDateTime(inquiry.created_at)}
+                        </p>
+                        <h2 className="text-xl font-semibold text-foreground">
+                          {inquiry.name}
+                        </h2>
+                        <div className="mt-2 flex flex-wrap gap-x-4 gap-y-1 text-sm text-foreground/55">
+                          <a href={`tel:${inquiry.phone}`}>{inquiry.phone}</a>
+                          <a href={`mailto:${inquiry.email}`}>{inquiry.email}</a>
+                          <span>
+                            메일 {inquiry.email_sent ? '발송 완료' : '발송 실패'}
+                          </span>
+                        </div>
+                      </div>
+                      <span
+                        className={`w-fit border px-2 py-1 text-xs ${statusClassNames[inquiry.status]}`}
+                      >
+                        {inquiryStatusLabels[inquiry.status]}
+                      </span>
+                    </div>
+
+                    <p className="mb-4 whitespace-pre-wrap text-sm leading-relaxed text-foreground/70">
+                      {inquiry.message}
+                    </p>
+
+                    {inquiry.email_error && (
+                      <p className="mb-4 border border-destructive/20 bg-destructive/5 p-3 text-xs text-destructive">
+                        메일 오류: {inquiry.email_error}
+                      </p>
+                    )}
+
+                    <div className="flex flex-wrap gap-2">
+                      {(['new', 'read', 'replied'] as const).map((status) => (
+                        <button
+                          key={status}
+                          type="button"
+                          disabled={
+                            updatingId === inquiry.id ||
+                            inquiry.status === status
+                          }
+                          onClick={() =>
+                            void updateInquiryStatus(inquiry.id, status)
+                          }
+                          className="border border-foreground/15 px-3 py-2 text-xs text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground disabled:opacity-40"
+                        >
+                          {inquiryStatusLabels[status]}
+                        </button>
+                      ))}
                     </div>
                   </article>
                 ))

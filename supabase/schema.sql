@@ -34,7 +34,7 @@ create table if not exists public.workshop_reviews (
   title text not null check (char_length(title) between 2 and 80),
   content text not null check (char_length(content) between 10 and 1000),
   invite_id uuid,
-  review_type text not null default 'class' check (review_type in ('class', 'product', 'offline', 'other')),
+  review_type text not null default 'class' check (review_type in ('class', 'product', 'other')),
   product_name text,
   class_name text,
   status text not null default 'pending' check (status in ('pending', 'approved', 'hidden')),
@@ -47,7 +47,7 @@ alter table public.workshop_reviews
 
 alter table public.workshop_reviews
   add column if not exists invite_id uuid,
-  add column if not exists review_type text not null default 'class' check (review_type in ('class', 'product', 'offline', 'other')),
+  add column if not exists review_type text not null default 'class',
   add column if not exists product_name text,
   add column if not exists class_name text;
 
@@ -55,13 +55,48 @@ create table if not exists public.review_invites (
   id uuid primary key default gen_random_uuid(),
   token text not null unique,
   customer_name text,
-  review_type text not null default 'offline' check (review_type in ('class', 'product', 'offline', 'other')),
+  review_type text not null default 'other' check (review_type in ('class', 'product', 'other')),
   product_name text,
   class_name text,
   expires_at timestamptz not null default (now() + interval '7 days'),
   used_at timestamptz,
   created_at timestamptz not null default now()
 );
+
+create table if not exists public.contact_inquiries (
+  id uuid primary key default gen_random_uuid(),
+  name text not null,
+  phone text not null,
+  email text not null,
+  message text not null,
+  status text not null default 'new' check (status in ('new', 'read', 'replied')),
+  email_sent boolean not null default false,
+  email_error text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+update public.workshop_reviews
+set review_type = 'other'
+where review_type = 'offline';
+
+update public.review_invites
+set review_type = 'other'
+where review_type = 'offline';
+
+alter table public.workshop_reviews
+  drop constraint if exists workshop_reviews_review_type_check;
+
+alter table public.workshop_reviews
+  add constraint workshop_reviews_review_type_check
+  check (review_type in ('class', 'product', 'other'));
+
+alter table public.review_invites
+  drop constraint if exists review_invites_review_type_check;
+
+alter table public.review_invites
+  add constraint review_invites_review_type_check
+  check (review_type in ('class', 'product', 'other'));
 
 alter table public.workshop_reviews
   drop constraint if exists workshop_reviews_invite_id_fkey;
@@ -123,6 +158,7 @@ alter table public.profiles enable row level security;
 alter table public.class_reservations enable row level security;
 alter table public.workshop_reviews enable row level security;
 alter table public.review_invites enable row level security;
+alter table public.contact_inquiries enable row level security;
 alter table public.site_products enable row level security;
 alter table public.workshop_classes enable row level security;
 
@@ -275,7 +311,7 @@ begin
     raise exception 'Only admins can create review invites.';
   end if;
 
-  if review_type not in ('class', 'product', 'offline', 'other') then
+  if review_type not in ('class', 'product', 'other') then
     raise exception 'Invalid review type.';
   end if;
 
@@ -382,6 +418,19 @@ with check (public.is_admin());
 drop policy if exists "review_invites_admin_all" on public.review_invites;
 create policy "review_invites_admin_all"
 on public.review_invites
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "contact_inquiries_public_insert" on public.contact_inquiries;
+create policy "contact_inquiries_public_insert"
+on public.contact_inquiries
+for insert
+with check (true);
+
+drop policy if exists "contact_inquiries_admin_all" on public.contact_inquiries;
+create policy "contact_inquiries_admin_all"
+on public.contact_inquiries
 for all
 using (public.is_admin())
 with check (public.is_admin());

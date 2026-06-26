@@ -5,7 +5,7 @@ import Header from '@/components/Header';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 
 type InviteStatus = 'loading' | 'valid' | 'invalid' | 'used' | 'expired' | 'submitted';
-type ReviewType = 'class' | 'product' | 'offline' | 'other';
+type ReviewType = 'class' | 'product' | 'other';
 
 interface PublicReviewInvite {
   customer_name: string | null;
@@ -20,7 +20,6 @@ interface PublicReviewInvite {
 const reviewTypeLabels: Record<ReviewType, string> = {
   class: '클래스',
   product: '제품',
-  offline: '오프라인 방문',
   other: '기타',
 };
 
@@ -32,7 +31,6 @@ function getUrlReviewType() {
   if (
     lastSegment === 'class' ||
     lastSegment === 'product' ||
-    lastSegment === 'offline' ||
     lastSegment === 'other'
   ) {
     return lastSegment;

@@ -50,7 +50,7 @@ export interface WorkshopReview {
   content: string;
   status: 'pending' | 'approved' | 'hidden';
   invite_id?: string | null;
-  review_type?: 'class' | 'product' | 'offline' | 'other';
+  review_type?: 'class' | 'product' | 'other';
   product_name?: string | null;
   class_name?: string | null;
   created_at: string;
@@ -61,12 +61,25 @@ export interface ReviewInvite {
   id: string;
   token: string;
   customer_name: string | null;
-  review_type: 'class' | 'product' | 'offline' | 'other';
+  review_type: 'class' | 'product' | 'other';
   product_name: string | null;
   class_name: string | null;
   expires_at: string;
   used_at: string | null;
   created_at: string;
+}
+
+export interface ContactInquiry {
+  id: string;
+  name: string;
+  phone: string;
+  email: string;
+  message: string;
+  status: 'new' | 'read' | 'replied';
+  email_sent: boolean;
+  email_error: string | null;
+  created_at: string;
+  updated_at?: string;
 }
 
 export interface SiteProduct {
