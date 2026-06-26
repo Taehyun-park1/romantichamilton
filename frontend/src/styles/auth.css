@@ -4,12 +4,16 @@
   @apply min-h-screen bg-background pt-24 md:pt-28;
 }
 
+.auth-page {
+  @apply min-h-screen bg-background pt-24 md:pt-28;
+}
+
 .auth-page__section {
-  @apply container py-16 md:py-24;
+  @apply container mx-auto flex min-h-[calc(100vh-6rem)] items-start justify-center py-16 md:min-h-[calc(100vh-7rem)] md:py-24;
 }
 
 .auth-page__panel {
-  @apply mx-auto max-w-md;
+  @apply w-full max-w-md;
 }
 
 .auth-page__eyebrow {
