@@ -1,63 +1,61 @@
 @reference "../index.css";
 
-@layer components {
-  .site-header {
-    @apply fixed left-0 right-0 top-0 z-50 border-b border-border bg-background/90 backdrop-blur-sm;
-  }
+.site-header {
+  @apply fixed left-0 right-0 top-0 z-50 border-b border-border bg-background/90 backdrop-blur-sm;
+}
 
-  .site-header__inner {
-    @apply container relative;
-  }
+.site-header__inner {
+  @apply container relative;
+}
 
-  .site-header__bar {
-    @apply flex h-16 items-center justify-between md:h-20;
-  }
+.site-header__bar {
+  @apply flex h-16 items-center justify-between md:h-20;
+}
 
-  .site-header__logo {
-    @apply text-base font-semibold text-foreground md:text-lg;
-  }
+.site-header__logo {
+  @apply text-base font-semibold text-foreground md:text-lg;
+}
 
-  .site-header__right {
-    @apply flex items-center gap-4;
-  }
+.site-header__right {
+  @apply flex items-center gap-4;
+}
 
-  .site-header__sections {
-    @apply hidden items-center gap-7 md:flex;
-  }
+.site-header__sections {
+  @apply hidden items-center gap-7 md:flex;
+}
 
-  .site-header__section-button {
-    @apply text-xs font-normal text-foreground/60 transition-colors duration-200 hover:text-foreground md:text-sm;
-  }
+.site-header__section-button {
+  @apply text-xs font-normal text-foreground/60 transition-colors duration-200 hover:text-foreground md:text-sm;
+}
 
-  .site-header__menu-button {
-    @apply grid h-8 w-8 place-items-center text-foreground/60 transition-colors hover:text-foreground;
-  }
+.site-header__menu-button {
+  @apply grid h-9 w-9 shrink-0 place-items-center text-foreground/60 transition-colors hover:text-foreground;
+}
 
-  .site-header__menu {
-    @apply border-t border-border bg-background md:absolute md:right-0 md:top-full md:w-60 md:border md:border-foreground/10 md:shadow-sm;
-  }
+.site-header__menu {
+  @apply fixed left-0 right-0 top-16 border-t border-border bg-background px-6 md:absolute md:left-auto md:right-0 md:top-full md:w-60 md:border md:border-foreground/10 md:px-0 md:shadow-sm;
+}
 
-  .site-header__menu-nav {
-    @apply space-y-1 py-4 md:p-3;
-  }
+.site-header__menu-nav {
+  @apply space-y-1 py-4 md:p-3;
+}
 
-  .site-header__mobile-sections {
-    @apply md:hidden;
-  }
+.site-header__mobile-sections {
+  @apply md:hidden;
+}
 
-  .site-header__mobile-section-button {
-    @apply block w-full px-0 py-2 text-left text-sm font-normal text-foreground/60 transition-colors hover:text-foreground md:px-3;
-  }
+.site-header__mobile-section-button {
+  @apply block w-full px-0 py-2 text-left text-sm font-normal text-foreground/60 transition-colors hover:text-foreground md:px-3;
+}
 
-  .site-header__page-links {
-    @apply border-t border-foreground/10 pt-3 md:border-t-0 md:pt-0;
-  }
+.site-header__page-links {
+  @apply border-t border-foreground/10 pt-3 md:border-t-0 md:pt-0;
+}
 
-  .site-header__page-link {
-    @apply block px-0 py-2 text-sm text-foreground/60 transition-colors hover:text-foreground md:px-3;
-  }
+.site-header__page-link {
+  @apply block px-0 py-2 text-sm text-foreground/60 transition-colors hover:text-foreground md:px-3;
+}
 
-  .site-header__page-button {
-    @apply block w-full px-0 py-2 text-left text-sm text-foreground/60 transition-colors hover:text-foreground md:px-3;
-  }
+.site-header__page-button {
+  @apply block w-full px-0 py-2 text-left text-sm text-foreground/60 transition-colors hover:text-foreground md:px-3;
 }

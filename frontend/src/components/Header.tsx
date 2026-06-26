@@ -57,7 +57,7 @@ export default function Header() {
       {/* old: fixed left-0 right-0 top-0 z-50 border-b border-border bg-background/90 backdrop-blur-sm */}
       <header className="site-header">
         {/* old: container relative */}
-        <div className="site-header__inner">
+        <div className="site-header__inner container">
           {/* old: flex h-16 items-center justify-between md:h-20 */}
           <div className="site-header__bar">
           <a

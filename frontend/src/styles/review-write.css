@@ -1,83 +1,81 @@
 @reference "../index.css";
 
-@layer components {
-  .review-write {
-    @apply min-h-screen bg-background pt-24 md:pt-28;
-  }
+.review-write {
+  @apply min-h-screen bg-background pt-24 md:pt-28;
+}
 
-  .review-write__section {
-    @apply container max-w-3xl pb-32 pt-10 md:pt-16;
-  }
+.review-write__section {
+  @apply container max-w-3xl pb-32 pt-10 md:pt-16;
+}
 
-  .review-write__eyebrow {
-    @apply mb-3 text-xs uppercase tracking-[0.16em] text-accent;
-  }
+.review-write__eyebrow {
+  @apply mb-3 text-xs uppercase tracking-[0.16em] text-accent;
+}
 
-  .review-write__title {
-    @apply mb-4 text-3xl font-semibold text-foreground md:text-5xl;
-  }
+.review-write__title {
+  @apply mb-4 text-3xl font-semibold text-foreground md:text-5xl;
+}
 
-  .review-write__intro {
-    @apply mb-10 max-w-xl text-sm leading-relaxed text-foreground/60;
-  }
+.review-write__intro {
+  @apply mb-10 max-w-xl text-sm leading-relaxed text-foreground/60;
+}
 
-  .review-write__message {
-    @apply border border-foreground/10 p-6 text-sm text-foreground/55;
-  }
+.review-write__message {
+  @apply border border-foreground/10 p-6 text-sm text-foreground/55;
+}
 
-  .review-write__form {
-    @apply border border-foreground/10 bg-card/60 p-5 md:p-7;
-  }
+.review-write__form {
+  @apply border border-foreground/10 bg-card/60 p-5 md:p-7;
+}
 
-  .review-write__summary {
-    @apply mb-8 border-b border-foreground/10 pb-5;
-  }
+.review-write__summary {
+  @apply mb-8 border-b border-foreground/10 pb-5;
+}
 
-  .review-write__type {
-    @apply mb-2 text-xs uppercase tracking-[0.16em] text-accent;
-  }
+.review-write__type {
+  @apply mb-2 text-xs uppercase tracking-[0.16em] text-accent;
+}
 
-  .review-write__target {
-    @apply text-2xl font-semibold text-foreground;
-  }
+.review-write__target {
+  @apply text-2xl font-semibold text-foreground;
+}
 
-  .review-write__fields {
-    @apply space-y-6;
-  }
+.review-write__fields {
+  @apply space-y-6;
+}
 
-  .review-write__field {
-    @apply block;
-  }
+.review-write__field {
+  @apply block;
+}
 
-  .review-write__label {
-    @apply mb-2 block text-sm text-foreground/60;
-  }
+.review-write__label {
+  @apply mb-2 block text-sm text-foreground/60;
+}
 
-  .review-write__input {
-    @apply w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground;
-  }
+.review-write__input {
+  @apply w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground;
+}
 
-  .review-write__textarea {
-    @apply w-full resize-none border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground;
-  }
+.review-write__textarea {
+  @apply w-full resize-none border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground;
+}
 
-  .review-write__stars {
-    @apply flex gap-2;
-  }
+.review-write__stars {
+  @apply flex gap-2;
+}
 
-  .review-write__star-button {
-    @apply p-1 text-accent;
-  }
+.review-write__star-button {
+  @apply p-1 text-accent;
+}
 
-  .review-write__star {
-    @apply size-6 fill-transparent;
-  }
+.review-write__star {
+  @apply size-6 fill-transparent;
+}
 
-  .review-write__star--active {
-    @apply fill-accent;
-  }
+.review-write__star--active {
+  @apply fill-accent;
+}
 
-  .review-write__submit {
-    @apply w-full disabled:opacity-50;
-  }
+.review-write__submit {
+  @apply w-full disabled:opacity-50;
 }
