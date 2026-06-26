@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { Menu, X } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import '@/styles/header.css';
 
 const sectionItems = [
   { label: '제품', href: '#products' },
@@ -52,25 +53,33 @@ export default function Header() {
   };
 
   return (
-    <header className="fixed left-0 right-0 top-0 z-50 border-b border-border bg-background/90 backdrop-blur-sm">
-      <div className="container relative">
-        <div className="flex h-16 items-center justify-between md:h-20">
+    <>
+      {/* old: fixed left-0 right-0 top-0 z-50 border-b border-border bg-background/90 backdrop-blur-sm */}
+      <header className="site-header">
+        {/* old: container relative */}
+        <div className="site-header__inner">
+          {/* old: flex h-16 items-center justify-between md:h-20 */}
+          <div className="site-header__bar">
           <a
             href="#top"
             onClick={handleLogoClick}
-            className="text-base font-semibold text-foreground md:text-lg"
+            /* old: text-base font-semibold text-foreground md:text-lg */
+            className="site-header__logo"
           >
             Romantic Hamilton
           </a>
 
-          <div className="flex items-center gap-4">
-            <nav className="hidden items-center gap-7 md:flex">
+          {/* old: flex items-center gap-4 */}
+          <div className="site-header__right">
+            {/* old: hidden items-center gap-7 md:flex */}
+            <nav className="site-header__sections">
               {sectionItems.map((item) => (
                 <button
                   key={item.label}
                   type="button"
                   onClick={() => handleSectionClick(item.href)}
-                  className="text-xs font-normal text-foreground/60 transition-colors duration-200 hover:text-foreground md:text-sm"
+                  /* old: text-xs font-normal text-foreground/60 transition-colors duration-200 hover:text-foreground md:text-sm */
+                  className="site-header__section-button"
                 >
                   {item.label}
                 </button>
@@ -82,34 +91,42 @@ export default function Header() {
               onClick={() => setIsMenuOpen((open) => !open)}
               aria-label={isMenuOpen ? '메뉴 닫기' : '메뉴 열기'}
               aria-expanded={isMenuOpen}
-              className="grid h-8 w-8 place-items-center text-foreground/60 transition-colors hover:text-foreground"
+              /* old: grid h-8 w-8 place-items-center text-foreground/60 transition-colors hover:text-foreground */
+              className="site-header__menu-button"
             >
               {isMenuOpen ? <X size={18} /> : <Menu size={18} />}
             </button>
           </div>
-        </div>
+          </div>
 
         {isMenuOpen && (
-          <div className="border-t border-border bg-background md:absolute md:right-0 md:top-full md:w-60 md:border md:border-foreground/10 md:shadow-sm">
-            <nav className="space-y-1 py-4 md:p-3">
-              <div className="md:hidden">
+          <>
+            {/* old: border-t border-border bg-background md:absolute md:right-0 md:top-full md:w-60 md:border md:border-foreground/10 md:shadow-sm */}
+            <div className="site-header__menu">
+              {/* old: space-y-1 py-4 md:p-3 */}
+              <nav className="site-header__menu-nav">
+                {/* old: md:hidden */}
+                <div className="site-header__mobile-sections">
                 {sectionItems.map((item) => (
                   <button
                     key={item.label}
                     type="button"
                     onClick={() => handleSectionClick(item.href)}
-                    className="block w-full px-0 py-2 text-left text-sm font-normal text-foreground/60 transition-colors hover:text-foreground md:px-3"
+                    /* old: block w-full px-0 py-2 text-left text-sm font-normal text-foreground/60 transition-colors hover:text-foreground md:px-3 */
+                    className="site-header__mobile-section-button"
                   >
                     {item.label}
                   </button>
                 ))}
-              </div>
+                </div>
 
-              <div className="border-t border-foreground/10 pt-3 md:border-t-0 md:pt-0">
+                {/* old: border-t border-foreground/10 pt-3 md:border-t-0 md:pt-0 */}
+                <div className="site-header__page-links">
                 <Link
                   href="/reserve"
                   onClick={closeMenu}
-                  className="block px-0 py-2 text-sm text-foreground/60 transition-colors hover:text-foreground md:px-3"
+                  /* old: block px-0 py-2 text-sm text-foreground/60 transition-colors hover:text-foreground md:px-3 */
+                  className="site-header__page-link"
                 >
                   예약
                 </Link>
@@ -117,7 +134,8 @@ export default function Header() {
                 <Link
                   href="/review/write"
                   onClick={closeMenu}
-                  className="block px-0 py-2 text-sm text-foreground/60 transition-colors hover:text-foreground md:px-3"
+                  /* old: block px-0 py-2 text-sm text-foreground/60 transition-colors hover:text-foreground md:px-3 */
+                  className="site-header__page-link"
                 >
                   리뷰 작성
                 </Link>
@@ -126,7 +144,8 @@ export default function Header() {
                   <Link
                     href="/admin"
                     onClick={closeMenu}
-                    className="block px-0 py-2 text-sm text-foreground/60 transition-colors hover:text-foreground md:px-3"
+                    /* old: block px-0 py-2 text-sm text-foreground/60 transition-colors hover:text-foreground md:px-3 */
+                    className="site-header__page-link"
                   >
                     관리자
                   </Link>
@@ -136,7 +155,8 @@ export default function Header() {
                   <button
                     type="button"
                     onClick={handleSignOut}
-                    className="block w-full px-0 py-2 text-left text-sm text-foreground/60 transition-colors hover:text-foreground md:px-3"
+                    /* old: block w-full px-0 py-2 text-left text-sm text-foreground/60 transition-colors hover:text-foreground md:px-3 */
+                    className="site-header__page-button"
                   >
                     로그아웃
                   </button>
@@ -144,16 +164,19 @@ export default function Header() {
                   <Link
                     href="/auth"
                     onClick={closeMenu}
-                    className="block px-0 py-2 text-sm text-foreground/60 transition-colors hover:text-foreground md:px-3"
+                    /* old: block px-0 py-2 text-sm text-foreground/60 transition-colors hover:text-foreground md:px-3 */
+                    className="site-header__page-link"
                   >
                     로그인
                   </Link>
                 )}
-              </div>
-            </nav>
-          </div>
+                </div>
+              </nav>
+            </div>
+          </>
         )}
-      </div>
-    </header>
+        </div>
+      </header>
+    </>
   );
 }
