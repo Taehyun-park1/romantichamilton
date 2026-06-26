@@ -1766,6 +1766,27 @@ export default function AdminDashboard() {
                       {review.content}
                     </p>
 
+                    {review.image_urls && review.image_urls.length > 0 && (
+                      <div className="mb-4 grid grid-cols-3 gap-2 md:grid-cols-6">
+                        {review.image_urls.map((imageUrl, index) => (
+                          <a
+                            key={imageUrl}
+                            href={imageUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="aspect-square overflow-hidden border border-foreground/10 bg-muted/20"
+                          >
+                            <img
+                              src={imageUrl}
+                              alt={`리뷰 사진 ${index + 1}`}
+                              className="h-full w-full object-cover"
+                              loading="lazy"
+                            />
+                          </a>
+                        ))}
+                      </div>
+                    )}
+
                     <div className="mb-4 grid gap-3 md:grid-cols-[minmax(0,1fr)_220px]">
                       <div className="text-xs text-foreground/50">
                         <span className="mr-2">

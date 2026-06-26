@@ -71,6 +71,22 @@
   @apply text-sm leading-relaxed text-foreground/70;
 }
 
+.reviews-section__images {
+  @apply mt-4 grid grid-cols-2 gap-2;
+}
+
+.reviews-section__image-wrap {
+  @apply relative aspect-square overflow-hidden bg-muted/30;
+}
+
+.reviews-section__image {
+  @apply h-full w-full object-cover;
+}
+
+.reviews-section__image-more {
+  @apply absolute inset-0 grid place-items-center bg-foreground/55 text-sm text-background;
+}
+
 .review-stars {
   @apply flex items-center gap-1;
 }

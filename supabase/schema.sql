@@ -53,6 +53,7 @@ create table if not exists public.workshop_reviews (
   rating integer not null check (rating between 1 and 5),
   title text not null check (char_length(title) between 2 and 80),
   content text not null check (char_length(content) between 10 and 1000),
+  image_urls text[] not null default '{}',
   invite_id uuid,
   review_type text not null default 'class' check (review_type in ('class', 'product', 'other')),
   product_name text,
@@ -66,6 +67,7 @@ alter table public.workshop_reviews
   alter column user_id drop not null;
 
 alter table public.workshop_reviews
+  add column if not exists image_urls text[] not null default '{}',
   add column if not exists invite_id uuid,
   add column if not exists review_type text not null default 'class',
   add column if not exists product_name text,
@@ -210,6 +212,26 @@ set
   file_size_limit = excluded.file_size_limit,
   allowed_mime_types = excluded.allowed_mime_types;
 
+insert into storage.buckets (
+  id,
+  name,
+  public,
+  file_size_limit,
+  allowed_mime_types
+)
+values (
+  'review-images',
+  'review-images',
+  true,
+  5242880,
+  array['image/jpeg', 'image/png', 'image/webp', 'image/gif']
+)
+on conflict (id) do update
+set
+  public = excluded.public,
+  file_size_limit = excluded.file_size_limit,
+  allowed_mime_types = excluded.allowed_mime_types;
+
 alter table public.profiles enable row level security;
 alter table public.class_reservations enable row level security;
 alter table public.workshop_reviews enable row level security;
@@ -275,12 +297,15 @@ as $$
   limit 1;
 $$;
 
+drop function if exists public.submit_invite_review(text, text, integer, text, text);
+
 create or replace function public.submit_invite_review(
   invite_token text,
   display_name text,
   rating integer,
   title text,
-  content text
+  content text,
+  image_urls text[] default '{}'
 )
 returns uuid
 language plpgsql
@@ -320,6 +345,7 @@ begin
     rating,
     title,
     content,
+    image_urls,
     review_type,
     product_name,
     class_name,
@@ -332,6 +358,7 @@ begin
     rating,
     trim(title),
     trim(content),
+    coalesce(image_urls, '{}'),
     target_invite.review_type,
     target_invite.product_name,
     target_invite.class_name,
@@ -557,3 +584,15 @@ create policy "admin_images_admin_delete"
 on storage.objects
 for delete
 using (bucket_id = 'admin-images' and public.is_admin());
+
+drop policy if exists "review_images_public_select" on storage.objects;
+create policy "review_images_public_select"
+on storage.objects
+for select
+using (bucket_id = 'review-images');
+
+drop policy if exists "review_images_public_insert" on storage.objects;
+create policy "review_images_public_insert"
+on storage.objects
+for insert
+with check (bucket_id = 'review-images');

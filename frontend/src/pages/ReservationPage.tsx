@@ -24,6 +24,11 @@ import {
 } from '@/lib/supabase';
 import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 import { getKoreanErrorMessage } from '@/lib/messages';
+import {
+  MAX_REVIEW_IMAGE_COUNT,
+  uploadReviewImages,
+  validateReviewImageFiles,
+} from '@/lib/reviewImages';
 import { cn } from '@/lib/utils';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -263,6 +268,7 @@ export default function ReservationPage() {
   const [reviewRating, setReviewRating] = useState(5);
   const [reviewTitle, setReviewTitle] = useState('');
   const [reviewContent, setReviewContent] = useState('');
+  const [reviewImageFiles, setReviewImageFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
   const [reviewSubmitting, setReviewSubmitting] = useState(false);
   const [expandedReservationIds, setExpandedReservationIds] = useState<
@@ -380,6 +386,7 @@ export default function ReservationPage() {
     setReviewRating(5);
     setReviewTitle(`${reservation.class_name} 후기`);
     setReviewContent('');
+    setReviewImageFiles([]);
     setDatePickerOpen(false);
   };
 
@@ -393,6 +400,7 @@ export default function ReservationPage() {
     setReviewRating(5);
     setReviewTitle('');
     setReviewContent('');
+    setReviewImageFiles([]);
   };
 
   const toggleReservationText = (reservationId: string) => {
@@ -499,12 +507,23 @@ export default function ReservationPage() {
 
     setReviewSubmitting(true);
 
+    let imageUrls: string[] = [];
+
+    try {
+      imageUrls = await uploadReviewImages(supabase, reviewImageFiles);
+    } catch (error) {
+      setReviewSubmitting(false);
+      toast.error(getKoreanErrorMessage(error, '사진을 업로드하지 못했습니다.'));
+      return;
+    }
+
     const { error } = await supabase.from('workshop_reviews').insert({
       user_id: user.id,
       display_name: displayName,
       rating: reviewRating,
       title: reviewTitle.trim(),
       content: reviewContent.trim(),
+      image_urls: imageUrls,
       review_type: 'class',
       class_name: reviewReservation.class_name,
       status: 'pending',
@@ -519,6 +538,31 @@ export default function ReservationPage() {
 
     toast.success('리뷰가 접수되었습니다. 확인 후 게시됩니다.');
     closeReviewCard();
+  };
+
+  const handleReviewImageChange = (
+    event: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const nextFiles = [
+      ...reviewImageFiles,
+      ...Array.from(event.target.files ?? []),
+    ].slice(0, MAX_REVIEW_IMAGE_COUNT);
+    const validationMessage = validateReviewImageFiles(nextFiles);
+
+    event.target.value = '';
+
+    if (validationMessage) {
+      toast.error(validationMessage);
+      return;
+    }
+
+    setReviewImageFiles(nextFiles);
+  };
+
+  const removeReviewImageFile = (targetIndex: number) => {
+    setReviewImageFiles((currentFiles) =>
+      currentFiles.filter((_, index) => index !== targetIndex)
+    );
   };
 
   if (loading || dataLoading) {
@@ -910,6 +954,48 @@ export default function ReservationPage() {
                         className="w-full resize-none border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground"
                         placeholder="클래스 경험을 남겨 주세요."
                       />
+                    </div>
+
+                    <div>
+                      <span className="mb-2 block text-sm text-foreground/60">
+                        사진 첨부
+                      </span>
+                      <label className="inline-flex cursor-pointer items-center justify-center border border-foreground/15 px-4 py-2.5 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground">
+                        <input
+                          type="file"
+                          accept="image/*"
+                          multiple
+                          onChange={handleReviewImageChange}
+                          className="hidden"
+                        />
+                        사진 선택
+                      </label>
+                      <p className="mt-2 text-xs text-foreground/45">
+                        최대 {MAX_REVIEW_IMAGE_COUNT}장, 장당 5MB 이하
+                      </p>
+                      {reviewImageFiles.length > 0 && (
+                        <div className="mt-3 grid grid-cols-3 gap-2">
+                          {reviewImageFiles.map((file, index) => (
+                            <div
+                              key={`${file.name}-${file.lastModified}-${index}`}
+                              className="relative aspect-square overflow-hidden border border-foreground/10 bg-muted/20"
+                            >
+                              <img
+                                src={URL.createObjectURL(file)}
+                                alt={`첨부 사진 ${index + 1}`}
+                                className="h-full w-full object-cover"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeReviewImageFile(index)}
+                                className="absolute right-1 top-1 bg-background/90 px-2 py-1 text-[11px] text-foreground/70"
+                              >
+                                삭제
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     <button

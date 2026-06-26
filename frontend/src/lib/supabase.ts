@@ -51,6 +51,7 @@ export interface WorkshopReview {
   rating: number;
   title: string;
   content: string;
+  image_urls?: string[] | null;
   status: 'pending' | 'approved' | 'hidden';
   invite_id?: string | null;
   review_type?: 'class' | 'product' | 'other';

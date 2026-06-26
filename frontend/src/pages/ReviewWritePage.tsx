@@ -4,6 +4,11 @@ import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { getKoreanErrorMessage } from '@/lib/messages';
+import {
+  MAX_REVIEW_IMAGE_COUNT,
+  uploadReviewImages,
+  validateReviewImageFiles,
+} from '@/lib/reviewImages';
 import '@/styles/review-write.css';
 
 type InviteStatus = 'loading' | 'valid' | 'invalid' | 'used' | 'expired' | 'submitted';
@@ -53,6 +58,7 @@ export default function ReviewWritePage() {
   const [rating, setRating] = useState(5);
   const [title, setTitle] = useState('');
   const [content, setContent] = useState('');
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
@@ -125,12 +131,23 @@ export default function ReviewWritePage() {
 
     setSubmitting(true);
 
+    let imageUrls: string[] = [];
+
+    try {
+      imageUrls = await uploadReviewImages(supabase, imageFiles);
+    } catch (error) {
+      setSubmitting(false);
+      toast.error(getKoreanErrorMessage(error, '사진을 업로드하지 못했습니다.'));
+      return;
+    }
+
     const { error } = await supabase.rpc('submit_invite_review', {
       invite_token: token,
       display_name: displayName.trim(),
       rating,
       title: title.trim(),
       content: content.trim(),
+      image_urls: imageUrls,
     });
 
     setSubmitting(false);
@@ -142,6 +159,29 @@ export default function ReviewWritePage() {
 
     setStatus('submitted');
     toast.success('리뷰가 접수되었습니다. 확인 후 게시됩니다.');
+  };
+
+  const handleImageChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const nextFiles = [
+      ...imageFiles,
+      ...Array.from(event.target.files ?? []),
+    ].slice(0, MAX_REVIEW_IMAGE_COUNT);
+    const validationMessage = validateReviewImageFiles(nextFiles);
+
+    event.target.value = '';
+
+    if (validationMessage) {
+      toast.error(validationMessage);
+      return;
+    }
+
+    setImageFiles(nextFiles);
+  };
+
+  const removeImageFile = (targetIndex: number) => {
+    setImageFiles((currentFiles) =>
+      currentFiles.filter((_, index) => index !== targetIndex)
+    );
   };
 
   return (
@@ -295,6 +335,48 @@ export default function ReviewWritePage() {
                     placeholder="제품이나 클래스 경험을 남겨주세요"
                   />
                 </label>
+
+                <div className="review-write__field">
+                  <span className="review-write__label">
+                    사진 첨부
+                  </span>
+                  <label className="review-write__file-trigger">
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageChange}
+                      className="review-write__file-input"
+                    />
+                    사진 선택
+                  </label>
+                  <p className="review-write__help">
+                    최대 {MAX_REVIEW_IMAGE_COUNT}장, 장당 5MB 이하
+                  </p>
+                  {imageFiles.length > 0 && (
+                    <div className="review-write__preview-grid">
+                      {imageFiles.map((file, index) => (
+                        <div
+                          key={`${file.name}-${file.lastModified}-${index}`}
+                          className="review-write__preview"
+                        >
+                          <img
+                            src={URL.createObjectURL(file)}
+                            alt={`첨부 사진 ${index + 1}`}
+                            className="review-write__preview-image"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => removeImageFile(index)}
+                            className="review-write__preview-remove"
+                          >
+                            삭제
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 <button
                   type="submit"

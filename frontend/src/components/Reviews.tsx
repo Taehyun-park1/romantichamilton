@@ -80,6 +80,25 @@ export function ReviewCard({ review }: { review: WorkshopReview }) {
       </div>
       {/* old: text-sm leading-relaxed text-foreground/70 */}
       <p className="reviews-section__content">{review.content}</p>
+      {review.image_urls && review.image_urls.length > 0 && (
+        <div className="reviews-section__images">
+          {review.image_urls.slice(0, 4).map((imageUrl, index) => (
+            <div key={imageUrl} className="reviews-section__image-wrap">
+              <img
+                src={imageUrl}
+                alt={`${review.title} 사진 ${index + 1}`}
+                className="reviews-section__image"
+                loading="lazy"
+              />
+              {index === 3 && review.image_urls!.length > 4 && (
+                <span className="reviews-section__image-more">
+                  +{review.image_urls!.length - 4}
+                </span>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
     </article>
   );
 }

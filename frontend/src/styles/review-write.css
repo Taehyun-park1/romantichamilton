@@ -59,6 +59,34 @@
   @apply w-full resize-none border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground;
 }
 
+.review-write__file-trigger {
+  @apply inline-flex cursor-pointer items-center justify-center border border-foreground/15 px-4 py-2.5 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground;
+}
+
+.review-write__file-input {
+  @apply hidden;
+}
+
+.review-write__help {
+  @apply mt-2 text-xs text-foreground/45;
+}
+
+.review-write__preview-grid {
+  @apply mt-3 grid grid-cols-3 gap-2;
+}
+
+.review-write__preview {
+  @apply relative aspect-square overflow-hidden border border-foreground/10 bg-muted/20;
+}
+
+.review-write__preview-image {
+  @apply h-full w-full object-cover;
+}
+
+.review-write__preview-remove {
+  @apply absolute right-1 top-1 bg-background/90 px-2 py-1 text-[11px] text-foreground/70;
+}
+
 .review-write__stars {
   @apply flex gap-2;
 }
