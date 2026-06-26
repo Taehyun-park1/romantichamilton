@@ -99,16 +99,15 @@ function isValidEmail(value: string) {
 
 function readSupabaseRestConfig() {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const apiKey =
-    process.env.SUPABASE_SERVICE_ROLE_KEY ||
-    process.env.SUPABASE_ANON_KEY ||
-    process.env.VITE_SUPABASE_ANON_KEY;
+  const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
 
-  if (!supabaseUrl || !apiKey) return null;
+  if (!supabaseUrl || (!serviceRoleKey && !anonKey)) return null;
 
   return {
     url: supabaseUrl.replace(/\/rest\/v1\/?$/, "").replace(/\/+$/, ""),
-    apiKey,
+    anonKey,
+    serviceRoleKey,
   };
 }
 
@@ -285,7 +284,8 @@ async function saveContactInquiry(
   body: ContactRequestBody,
   userId: string,
   emailSent: boolean,
-  emailError?: string
+  emailError?: string,
+  userAccessToken?: string
 ) {
   const config = readSupabaseRestConfig();
 
@@ -293,12 +293,19 @@ async function saveContactInquiry(
     throw new Error("supabase_rest_not_configured");
   }
 
+  const apiKey = config.serviceRoleKey || config.anonKey;
+  const authorizationToken = config.serviceRoleKey || userAccessToken;
+
+  if (!apiKey || !authorizationToken) {
+    throw new Error("supabase_rest_not_configured");
+  }
+
   const payload = validateContactPayload(body);
   const response = await fetch(`${config.url}/rest/v1/contact_inquiries`, {
     method: "POST",
     headers: {
-      apikey: config.apiKey,
-      Authorization: `Bearer ${config.apiKey}`,
+      apikey: apiKey,
+      Authorization: `Bearer ${authorizationToken}`,
       "Content-Type": "application/json",
       Prefer: "return=minimal",
     },
@@ -485,6 +492,7 @@ async function startServer() {
       return;
     }
 
+    const userAccessToken = (req.get("authorization") || "").replace(/^Bearer\s+/i, "");
     const userId = await readAuthenticatedUserId(req);
 
     try {
@@ -493,7 +501,7 @@ async function startServer() {
 
       if (userId) {
         try {
-          await saveContactInquiry(body, userId, true);
+          await saveContactInquiry(body, userId, true, undefined, userAccessToken);
         } catch (saveError) {
           console.error("Contact inquiry save failed after email sent", saveError);
         }
@@ -510,7 +518,7 @@ async function startServer() {
 
       if (userId) {
         try {
-          await saveContactInquiry(body, userId, false, message);
+          await saveContactInquiry(body, userId, false, message, userAccessToken);
         } catch (saveError) {
           console.error("Contact inquiry save after failure failed", saveError);
         }
@@ -617,11 +625,6 @@ async function startServer() {
         },
       });
       const profilePayload = (await profileResponse.json()) as NaverProfileResponse;
-
-      console.log("Naver OAuth profile received", {
-        id: profilePayload?.response?.id,
-        email: profilePayload?.response?.email,
-      });
 
       if (!profileResponse.ok || !profilePayload.response?.id) {
         res.redirect("/auth?error=naver_profile_failed");

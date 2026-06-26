@@ -486,6 +486,8 @@ export default function ReservationPage() {
       rating: reviewRating,
       title: reviewTitle.trim(),
       content: reviewContent.trim(),
+      review_type: 'class',
+      class_name: reviewReservation.class_name,
       status: 'pending',
     });
 

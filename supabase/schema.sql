@@ -331,7 +331,7 @@ begin
     raise exception 'Only admins can create review invites.';
   end if;
 
-  if review_type not in ('class', 'product', 'other') then
+  if review_type not in ('class', 'product') then
     raise exception 'Invalid review type.';
   end if;
 

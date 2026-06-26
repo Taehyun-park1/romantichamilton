@@ -31,6 +31,10 @@ import {
 
 type AdminTab = 'products' | 'classes' | 'reviews' | 'reservations' | 'inquiries';
 type ReviewDeliveryChannel = 'email' | 'sms';
+type ReviewInviteType = Extract<
+  NonNullable<WorkshopReview['review_type']>,
+  'class' | 'product'
+>;
 
 const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)
   ?.replace(/\/+$/, '');
@@ -61,6 +65,14 @@ const reviewTypeLabels: Record<
   product: '제품',
   other: '기타',
 };
+
+const reviewInviteTypeOptions: Array<{
+  value: ReviewInviteType;
+  label: string;
+}> = [
+  { value: 'class', label: reviewTypeLabels.class },
+  { value: 'product', label: reviewTypeLabels.product },
+];
 
 const productCategoryLabels: Record<SiteProduct['category'], string> = {
   wallets: '지갑',
@@ -195,10 +207,12 @@ export default function AdminDashboard() {
   const [uploadingImageId, setUploadingImageId] = useState<string | null>(null);
   const [inviteCustomerName, setInviteCustomerName] = useState('');
   const [inviteReviewType, setInviteReviewType] =
-    useState<NonNullable<WorkshopReview['review_type']>>('other');
+    useState<ReviewInviteType>('class');
   const [inviteProductName, setInviteProductName] = useState('');
   const [inviteClassName, setInviteClassName] = useState('');
   const [generatedReviewUrl, setGeneratedReviewUrl] = useState('');
+  const [generatedReviewCustomerName, setGeneratedReviewCustomerName] =
+    useState('');
   const [reviewDeliveryChannel, setReviewDeliveryChannel] =
     useState<ReviewDeliveryChannel>('email');
   const [reviewRecipientEmail, setReviewRecipientEmail] = useState('');
@@ -512,10 +526,11 @@ export default function AdminDashboard() {
 
     if (!supabase) return;
 
+    const customerName = inviteCustomerName.trim();
     const token = createReviewToken();
     const { error } = await supabase.rpc('create_review_invite', {
       invite_token: token,
-      customer_name: inviteCustomerName.trim(),
+      customer_name: customerName,
       review_type: inviteReviewType,
       product_name: inviteProductName.trim(),
       class_name: inviteClassName.trim(),
@@ -528,6 +543,7 @@ export default function AdminDashboard() {
 
     const reviewUrl = `${window.location.origin}/review/write/${inviteReviewType}?token=${token}`;
     setGeneratedReviewUrl(reviewUrl);
+    setGeneratedReviewCustomerName(customerName);
     setInviteCustomerName('');
     setInviteProductName('');
     setInviteClassName('');
@@ -570,7 +586,7 @@ export default function AdminDashboard() {
         },
         body: JSON.stringify({
           email: reviewRecipientEmail.trim(),
-          customerName: inviteCustomerName.trim(),
+          customerName: generatedReviewCustomerName,
           reviewUrl: generatedReviewUrl,
           message: reviewInviteMessage.trim(),
         }),
@@ -1180,13 +1196,12 @@ export default function AdminDashboard() {
                       value={inviteReviewType}
                       onChange={(event) =>
                         setInviteReviewType(
-                          event.target
-                            .value as NonNullable<WorkshopReview['review_type']>
+                          event.target.value as ReviewInviteType
                         )
                       }
                       className="w-full border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground"
                     >
-                      {Object.entries(reviewTypeLabels).map(([value, label]) => (
+                      {reviewInviteTypeOptions.map(({ value, label }) => (
                         <option key={value} value={value}>
                           {label}
                         </option>

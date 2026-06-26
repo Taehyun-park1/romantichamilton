@@ -1,27 +1,28 @@
-import { useEffect, useState } from 'react';
-import { toast } from 'sonner';
-import { useAuth } from '@/contexts/AuthContext';
-import '@/styles/contact.css';
+import { useEffect, useState } from "react";
+import { toast } from "sonner";
+import { useAuth } from "@/contexts/AuthContext";
+import "@/styles/contact.css";
 
-const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)
-  ?.replace(/\/+$/, '');
+const apiBaseUrl = (
+  import.meta.env.VITE_API_BASE_URL as string | undefined
+)?.replace(/\/+$/, "");
 
 export default function Contact() {
   const { session, profile } = useAuth();
   const [formData, setFormData] = useState({
-    name: '',
-    phone: '',
-    email: '',
-    message: '',
-    website: '',
+    name: "",
+    phone: "",
+    email: "",
+    message: "",
+    website: "",
   });
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    setFormData((previous) => ({
+    setFormData(previous => ({
       ...previous,
-      name: previous.name || profile?.display_name || '',
-      email: previous.email || profile?.email || '',
+      name: previous.name || profile?.display_name || "",
+      email: previous.email || profile?.email || "",
     }));
   }, [profile?.display_name, profile?.email]);
 
@@ -29,7 +30,7 @@ export default function Contact() {
     event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = event.target;
-    setFormData((previous) => ({ ...previous, [name]: value }));
+    setFormData(previous => ({ ...previous, [name]: value }));
   };
 
   const handleSubmit = async (event: React.FormEvent) => {
@@ -41,23 +42,23 @@ export default function Contact() {
       !formData.email.trim() ||
       !formData.message.trim()
     ) {
-      toast.error('이름, 연락처, 이메일, 문의 내용을 모두 입력해 주세요.');
+      toast.error("이름, 연락처, 이메일, 문의 내용을 모두 입력해 주세요.");
       return;
     }
 
     // A hidden honeypot field blocks simple form bots without storing any data.
     if (formData.website) {
-      toast.success('문의가 이메일로 전송되었습니다.');
+      toast.success("문의가 이메일로 전송되었습니다.");
       return;
     }
 
     setSubmitting(true);
 
     try {
-      const response = await fetch(`${apiBaseUrl ?? ''}/api/contact`, {
-        method: 'POST',
+      const response = await fetch(`${apiBaseUrl ?? ""}/api/contact`, {
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
           ...(session?.access_token
             ? { Authorization: `Bearer ${session.access_token}` }
             : {}),
@@ -66,28 +67,28 @@ export default function Contact() {
       });
 
       if (!response.ok) {
-        const requestError = new Error('contact_send_failed') as Error & {
+        const requestError = new Error("contact_send_failed") as Error & {
           status?: number;
         };
         requestError.status = response.status;
         throw requestError;
       }
 
-      toast.success('문의가 이메일로 전송되었습니다.');
+      toast.success("문의가 이메일로 전송되었습니다.");
       setFormData({
-        name: profile?.display_name ?? '',
-        phone: '',
-        email: profile?.email ?? '',
-        message: '',
-        website: '',
+        name: profile?.display_name ?? "",
+        phone: "",
+        email: profile?.email ?? "",
+        message: "",
+        website: "",
       });
     } catch (error) {
       const requestError = error as Error & { status?: number };
-      console.error('Contact email send failed', requestError);
+      console.error("Contact email send failed", requestError);
       toast.error(
         requestError.status === 429
-          ? '문의가 너무 자주 전송되었습니다. 잠시 후 다시 시도해 주세요.'
-          : '문의 이메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요.'
+          ? "문의가 너무 자주 전송되었습니다. 잠시 후 다시 시도해 주세요."
+          : "문의 이메일을 보내지 못했습니다. 잠시 후 다시 시도해 주세요."
       );
     } finally {
       setSubmitting(false);
@@ -106,34 +107,26 @@ export default function Contact() {
         <div className="contact-section__grid">
           <div>
             {/* old: mb-3 text-xs uppercase tracking-[0.16em] text-accent */}
-            <p className="contact-section__eyebrow">
-              Contact
-            </p>
+            <p className="contact-section__eyebrow">Contact</p>
             {/* old: mb-8 text-3xl font-semibold text-foreground md:text-5xl */}
-            <h2 className="contact-section__title">
-              제작 문의
-            </h2>
+            <h2 className="contact-section__title">제작 문의</h2>
 
             {/* old: space-y-7 */}
             <div className="contact-section__info-list">
               <div>
                 {/* old: mb-2 text-xs font-normal uppercase tracking-[0.14em] text-foreground/50 */}
-                <h3 className="contact-section__info-label">
-                  Phone
-                </h3>
+                <h3 className="contact-section__info-label">Phone</h3>
                 <a
                   href="tel:+821012345678"
                   /* old: text-lg text-foreground transition-colors hover:text-accent */
                   className="contact-section__info-link"
                 >
-                  +82 10-1234-5678
+                  010-8077-4776
                 </a>
               </div>
               <div>
                 {/* old: mb-2 text-xs font-normal uppercase tracking-[0.14em] text-foreground/50 */}
-                <h3 className="contact-section__info-label">
-                  Email
-                </h3>
+                <h3 className="contact-section__info-label">Email</h3>
                 <a
                   href="mailto:hello@romantichamilton.com"
                   /* old: text-lg text-foreground transition-colors hover:text-accent */
@@ -144,9 +137,7 @@ export default function Contact() {
               </div>
               <div>
                 {/* old: mb-2 text-xs font-normal uppercase tracking-[0.14em] text-foreground/50 */}
-                <h3 className="contact-section__info-label">
-                  Hours
-                </h3>
+                <h3 className="contact-section__info-label">Hours</h3>
                 {/* old: text-lg text-foreground */}
                 <p className="contact-section__hours">
                   평일 10:00 - 18:00
@@ -269,7 +260,7 @@ export default function Contact() {
             </div>
 
             <button type="submit" disabled={submitting} className="btn-primary">
-              {submitting ? '전송 중' : '문의 보내기'}
+              {submitting ? "전송 중" : "문의 보내기"}
             </button>
           </form>
         </div>
