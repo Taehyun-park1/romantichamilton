@@ -1,4 +1,4 @@
-import { Mail, MapPin, Phone } from "lucide-react";
+import { Instagram, Mail, MapPin, Phone } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -32,6 +32,15 @@ export default function Footer() {
               >
                 <Mail size={16} />
                 hello@romantichamilton.com
+              </a>
+              <a
+                href="https://www.instagram.com/romantic_hamilton"
+                target="_blank"
+                rel="noreferrer"
+                className="flex items-center gap-2 text-sm text-background/70 transition-colors hover:text-background"
+              >
+                <Instagram size={16} />
+                @romantic_hamilton
               </a>
               <div className="flex items-start gap-2 text-sm text-background/70">
                 <MapPin size={16} className="mt-0.5 shrink-0" />

@@ -23,6 +23,7 @@ create table if not exists public.class_reservations (
   preferred_date date not null,
   phone text not null default '',
   note text,
+  admin_note text,
   status text not null default 'pending' check (status in ('pending', 'confirmed', 'cancelled')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
@@ -33,6 +34,9 @@ alter table public.profiles
 
 alter table public.class_reservations
   add column if not exists phone text;
+
+alter table public.class_reservations
+  add column if not exists admin_note text;
 
 update public.class_reservations
 set phone = ''
@@ -157,6 +161,35 @@ create table if not exists public.workshop_classes (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.site_hero_images (
+  id text primary key,
+  image text not null,
+  alt text,
+  is_active boolean not null default true,
+  sort_order integer not null default 0,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+insert into public.site_hero_images (
+  id,
+  image,
+  alt,
+  is_active,
+  sort_order
+)
+values
+  ('hero-001', '/rh-images/rh-01.png', 'Romantic Hamilton hero 1', true, 0),
+  ('hero-002', '/rh-images/rh-02.png', 'Romantic Hamilton hero 2', true, 1),
+  ('hero-003', '/rh-images/rh-03.png', 'Romantic Hamilton hero 3', true, 2)
+on conflict (id) do update
+set
+  image = excluded.image,
+  alt = excluded.alt,
+  is_active = excluded.is_active,
+  sort_order = excluded.sort_order,
+  updated_at = now();
+
 insert into storage.buckets (
   id,
   name,
@@ -184,6 +217,7 @@ alter table public.review_invites enable row level security;
 alter table public.contact_inquiries enable row level security;
 alter table public.site_products enable row level security;
 alter table public.workshop_classes enable row level security;
+alter table public.site_hero_images enable row level security;
 
 create or replace function public.is_admin()
 returns boolean
@@ -482,6 +516,19 @@ using (is_active = true or public.is_admin());
 drop policy if exists "workshop_classes_admin_all" on public.workshop_classes;
 create policy "workshop_classes_admin_all"
 on public.workshop_classes
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "site_hero_images_public_select_active" on public.site_hero_images;
+create policy "site_hero_images_public_select_active"
+on public.site_hero_images
+for select
+using (is_active = true or public.is_admin());
+
+drop policy if exists "site_hero_images_admin_all" on public.site_hero_images;
+create policy "site_hero_images_admin_all"
+on public.site_hero_images
 for all
 using (public.is_admin())
 with check (public.is_admin());

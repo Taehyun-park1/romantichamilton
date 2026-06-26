@@ -1,6 +1,11 @@
 import { useEffect, useRef, useState } from 'react';
+import {
+  isSupabaseConfigured,
+  supabase,
+  type SiteHeroImage,
+} from '@/lib/supabase';
 
-const heroImages = [
+export const fallbackHeroImages = [
   '/rh-images/rh-01.png',
   '/rh-images/rh-02.png',
   '/rh-images/rh-03.png',
@@ -14,23 +19,53 @@ interface HeroProps {
 }
 
 export default function Hero({ onExplore, onCustom }: HeroProps) {
+  const [heroImages, setHeroImages] = useState<string[]>(fallbackHeroImages);
   const [activeIndex, setActiveIndex] = useState(0);
   const dragStart = useRef<{ x: number; y: number } | null>(null);
+  const imageCount = heroImages.length;
 
   const showPreviousImage = () => {
     setActiveIndex((current) =>
-      current === 0 ? heroImages.length - 1 : current - 1
+      current === 0 ? imageCount - 1 : current - 1
     );
   };
 
   const showNextImage = () => {
-    setActiveIndex((current) => (current + 1) % heroImages.length);
+    setActiveIndex((current) => (current + 1) % imageCount);
   };
 
   useEffect(() => {
+    if (!supabase || !isSupabaseConfigured) return;
+
+    let mounted = true;
+    const supabaseClient = supabase;
+
+    const loadHeroImages = async () => {
+      const { data, error } = await supabaseClient
+        .from('site_hero_images')
+        .select('*')
+        .eq('is_active', true)
+        .order('sort_order', { ascending: true });
+
+      if (!mounted || error || !data || data.length === 0) return;
+
+      setHeroImages((data as SiteHeroImage[]).map((item) => item.image));
+      setActiveIndex(0);
+    };
+
+    void loadHeroImages();
+
+    return () => {
+      mounted = false;
+    };
+  }, []);
+
+  useEffect(() => {
+    if (imageCount === 0) return;
+
     const timer = window.setInterval(showNextImage, 4500);
     return () => window.clearInterval(timer);
-  }, []);
+  }, [imageCount]);
 
   const handlePointerDown = (event: React.PointerEvent<HTMLElement>) => {
     const target = event.target as HTMLElement;

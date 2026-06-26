@@ -3,6 +3,7 @@ import {
   BookOpen,
   CalendarDays,
   Copy,
+  Image as ImageIcon,
   ImageUp,
   Link as LinkIcon,
   Mail,
@@ -16,20 +17,29 @@ import {
 import { useLocation } from 'wouter';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
+import { fallbackHeroImages } from '@/components/Hero';
 import { products as fallbackProducts, workshops as fallbackWorkshops } from '@/data/products';
 import { useAuth } from '@/contexts/AuthContext';
+import { normalizePhoneNumber } from '@/lib/phone';
 import {
   type ClassReservation,
   type ContactInquiry,
   isSupabaseConfigured,
   type Profile,
+  type SiteHeroImage,
   type SiteProduct,
   supabase,
   type WorkshopClass,
   type WorkshopReview,
 } from '@/lib/supabase';
 
-type AdminTab = 'products' | 'classes' | 'reviews' | 'reservations' | 'inquiries';
+type AdminTab =
+  | 'carousel'
+  | 'products'
+  | 'classes'
+  | 'reviews'
+  | 'reservations'
+  | 'inquiries';
 type ReviewDeliveryChannel = 'email' | 'sms';
 type ReviewInviteType = Extract<
   NonNullable<WorkshopReview['review_type']>,
@@ -118,6 +128,16 @@ function toWorkshopClass(workshop: (typeof fallbackWorkshops)[number], index: nu
   };
 }
 
+function toHeroImage(image: string, index: number): SiteHeroImage {
+  return {
+    id: `hero-${String(index + 1).padStart(3, '0')}`,
+    image,
+    alt: `Romantic Hamilton hero ${index + 1}`,
+    is_active: true,
+    sort_order: index,
+  };
+}
+
 function formatDate(dateValue: string) {
   return new Intl.DateTimeFormat('ko-KR', {
     year: 'numeric',
@@ -135,6 +155,14 @@ function formatDateTime(dateValue: string) {
     hour: '2-digit',
     minute: '2-digit',
   }).format(new Date(dateValue));
+}
+
+function getProfileDisplayName(profile: Profile | undefined, fallbackId: string) {
+  return (
+    profile?.display_name ||
+    profile?.email ||
+    fallbackId.slice(0, 8)
+  );
 }
 
 function createAdminItemId(prefix: string) {
@@ -188,10 +216,23 @@ function createDraftClass(sortOrder: number): WorkshopClass {
   };
 }
 
+function createDraftHeroImage(sortOrder: number): SiteHeroImage {
+  return {
+    id: createAdminItemId('hero'),
+    image: '/rh-images/rh-01.png',
+    alt: 'Romantic Hamilton hero',
+    is_active: true,
+    sort_order: sortOrder,
+  };
+}
+
 export default function AdminDashboard() {
   const [, navigate] = useLocation();
   const { session, loading, isAuthenticated, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<AdminTab>('products');
+  const [activeTab, setActiveTab] = useState<AdminTab>('carousel');
+  const [heroImages, setHeroImages] = useState<SiteHeroImage[]>(
+    fallbackHeroImages.map(toHeroImage)
+  );
   const [products, setProducts] = useState<SiteProduct[]>(
     fallbackProducts.map(toSiteProduct)
   );
@@ -213,6 +254,10 @@ export default function AdminDashboard() {
   const [generatedReviewUrl, setGeneratedReviewUrl] = useState('');
   const [generatedReviewCustomerName, setGeneratedReviewCustomerName] =
     useState('');
+  const [generatedReviewTargetName, setGeneratedReviewTargetName] =
+    useState('');
+  const [generatedReviewType, setGeneratedReviewType] =
+    useState<ReviewInviteType>('class');
   const [reviewDeliveryChannel, setReviewDeliveryChannel] =
     useState<ReviewDeliveryChannel>('email');
   const [reviewRecipientEmail, setReviewRecipientEmail] = useState('');
@@ -232,6 +277,7 @@ export default function AdminDashboard() {
     const supabaseClient = supabase;
 
     const [
+      heroResult,
       productResult,
       classResult,
       reservationResult,
@@ -240,6 +286,10 @@ export default function AdminDashboard() {
       profileResult,
     ] =
       await Promise.all([
+        supabaseClient
+          .from('site_hero_images')
+          .select('*')
+          .order('sort_order', { ascending: true }),
         supabaseClient
           .from('site_products')
           .select('*')
@@ -266,6 +316,10 @@ export default function AdminDashboard() {
           .select('*')
           .order('created_at', { ascending: false }),
       ]);
+
+    if (!heroResult.error && heroResult.data?.length) {
+      setHeroImages(heroResult.data as SiteHeroImage[]);
+    }
 
     if (!productResult.error && productResult.data?.length) {
       setProducts(productResult.data as SiteProduct[]);
@@ -335,6 +389,26 @@ export default function AdminDashboard() {
     [inquiries]
   );
 
+  const profilesById = useMemo(
+    () =>
+      profiles.reduce<Record<string, Profile>>((profileMap, profile) => {
+        profileMap[profile.id] = profile;
+        return profileMap;
+      }, {}),
+    [profiles]
+  );
+
+  const updateHeroImage = (
+    heroImageId: string,
+    patch: Partial<SiteHeroImage>
+  ) => {
+    setHeroImages((currentHeroImages) =>
+      currentHeroImages.map((heroImage) =>
+        heroImage.id === heroImageId ? { ...heroImage, ...patch } : heroImage
+      )
+    );
+  };
+
   const updateProduct = (productId: string, patch: Partial<SiteProduct>) => {
     setProducts((currentProducts) =>
       currentProducts.map((product) =>
@@ -360,6 +434,13 @@ export default function AdminDashboard() {
     ]);
   };
 
+  const addHeroImage = () => {
+    setHeroImages((currentHeroImages) => [
+      createDraftHeroImage(currentHeroImages.length),
+      ...currentHeroImages,
+    ]);
+  };
+
   const addClass = () => {
     setClasses((currentClasses) => [
       createDraftClass(currentClasses.length),
@@ -367,7 +448,10 @@ export default function AdminDashboard() {
     ]);
   };
 
-  const uploadAdminImage = async (file: File, folder: 'products' | 'classes') => {
+  const uploadAdminImage = async (
+    file: File,
+    folder: 'hero' | 'products' | 'classes'
+  ) => {
     if (!supabase) {
       toast.error('Supabase 설정이 필요합니다.');
       return null;
@@ -403,6 +487,17 @@ export default function AdminDashboard() {
     return data.publicUrl;
   };
 
+  const uploadHeroImage = async (heroImageId: string, file: File) => {
+    setUploadingImageId(heroImageId);
+    const publicUrl = await uploadAdminImage(file, 'hero');
+    setUploadingImageId(null);
+
+    if (!publicUrl) return;
+
+    updateHeroImage(heroImageId, { image: publicUrl });
+    toast.success('캐러셀 사진이 등록되었습니다. 저장을 눌러 반영해 주세요.');
+  };
+
   const uploadProductImage = async (productId: string, file: File) => {
     setUploadingImageId(productId);
     const publicUrl = await uploadAdminImage(file, 'products');
@@ -423,6 +518,26 @@ export default function AdminDashboard() {
 
     updateClass(classId, { image: publicUrl });
     toast.success('클래스 사진이 등록되었습니다. 저장을 눌러 반영해주세요.');
+  };
+
+  const saveHeroImage = async (heroImage: SiteHeroImage) => {
+    if (!supabase) return;
+
+    setUpdatingId(heroImage.id);
+
+    const { error } = await supabase.from('site_hero_images').upsert({
+      ...heroImage,
+      updated_at: new Date().toISOString(),
+    });
+
+    setUpdatingId(null);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success('캐러셀 이미지가 저장되었습니다.');
   };
 
   const saveProduct = async (product: SiteProduct) => {
@@ -493,6 +608,42 @@ export default function AdminDashboard() {
     toast.success('예약 상태가 변경되었습니다.');
   };
 
+  const updateReservationAdminNoteDraft = (
+    reservationId: string,
+    adminNote: string
+  ) => {
+    setReservations((currentReservations) =>
+      currentReservations.map((reservation) =>
+        reservation.id === reservationId
+          ? { ...reservation, admin_note: adminNote }
+          : reservation
+      )
+    );
+  };
+
+  const saveReservationAdminNote = async (reservation: ClassReservation) => {
+    if (!supabase) return;
+
+    setUpdatingId(reservation.id);
+
+    const { error } = await supabase
+      .from('class_reservations')
+      .update({
+        admin_note: reservation.admin_note?.trim() || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', reservation.id);
+
+    setUpdatingId(null);
+
+    if (error) {
+      toast.error(error.message);
+      return;
+    }
+
+    toast.success('관리자 메모가 저장되었습니다.');
+  };
+
   const updateReviewStatus = async (
     reviewId: string,
     status: WorkshopReview['status']
@@ -527,6 +678,10 @@ export default function AdminDashboard() {
     if (!supabase) return;
 
     const customerName = inviteCustomerName.trim();
+    const targetName =
+      inviteReviewType === 'product'
+        ? inviteProductName.trim()
+        : inviteClassName.trim();
     const token = createReviewToken();
     const { error } = await supabase.rpc('create_review_invite', {
       invite_token: token,
@@ -544,6 +699,8 @@ export default function AdminDashboard() {
     const reviewUrl = `${window.location.origin}/review/write/${inviteReviewType}?token=${token}`;
     setGeneratedReviewUrl(reviewUrl);
     setGeneratedReviewCustomerName(customerName);
+    setGeneratedReviewTargetName(targetName);
+    setGeneratedReviewType(inviteReviewType);
     setInviteCustomerName('');
     setInviteProductName('');
     setInviteClassName('');
@@ -557,7 +714,24 @@ export default function AdminDashboard() {
     toast.success('리뷰 링크를 복사했습니다.');
   };
 
-  const reviewInviteText = `${reviewInviteMessage.trim()}\n\n${generatedReviewUrl}\n\n리뷰 링크는 1회만 사용할 수 있으며 7일 후 만료됩니다.`;
+  const currentInviteTargetName =
+    generatedReviewTargetName ||
+    (inviteReviewType === 'product'
+      ? inviteProductName.trim()
+      : inviteClassName.trim());
+  const currentInviteCustomerName =
+    generatedReviewCustomerName || inviteCustomerName.trim() || '고객';
+  const currentInviteTypeLabel =
+    reviewTypeLabels[generatedReviewUrl ? generatedReviewType : inviteReviewType];
+  const reviewInviteText = [
+    `${currentInviteCustomerName}님, Romantic Hamilton ${currentInviteTypeLabel} 이용 후기를 부탁드립니다.`,
+    currentInviteTargetName ? `대상: ${currentInviteTargetName}` : '',
+    reviewInviteMessage.trim(),
+    generatedReviewUrl,
+    '리뷰 링크는 1회만 사용할 수 있으며 7일 후 만료됩니다.',
+  ]
+    .filter(Boolean)
+    .join('\n\n');
 
   const sendReviewInviteEmail = async () => {
     if (!generatedReviewUrl) {
@@ -707,7 +881,16 @@ export default function AdminDashboard() {
             </button>
           </div>
 
-          <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-5">
+          <div className="mb-8 grid grid-cols-1 gap-4 md:grid-cols-6">
+            <div className="border border-foreground/10 bg-card/60 p-5">
+              <div className="mb-4 flex items-center justify-between">
+                <p className="text-sm text-foreground/55">캐러셀</p>
+                <ImageIcon className="size-4 text-accent" />
+              </div>
+              <p className="text-4xl font-semibold text-foreground">
+                {heroImages.length}
+              </p>
+            </div>
             <div className="border border-foreground/10 bg-card/60 p-5">
               <div className="mb-4 flex items-center justify-between">
                 <p className="text-sm text-foreground/55">제품</p>
@@ -757,6 +940,7 @@ export default function AdminDashboard() {
 
           <div className="mb-6 flex gap-2 overflow-x-auto border-b border-foreground/10">
             {[
+              ['carousel', '캐러셀 관리'],
               ['products', '제품 관리'],
               ['classes', '클래스 관리'],
               ['reviews', '리뷰 관리'],
@@ -777,6 +961,125 @@ export default function AdminDashboard() {
               </button>
             ))}
           </div>
+
+          {activeTab === 'carousel' && (
+            <section className="space-y-4">
+              <div className="flex justify-end">
+                <button
+                  type="button"
+                  onClick={addHeroImage}
+                  className="inline-flex items-center gap-2 border border-foreground/15 px-4 py-2.5 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground"
+                >
+                  <Plus className="size-4" />
+                  새 이미지 추가
+                </button>
+              </div>
+
+              {heroImages.map((heroImage) => (
+                <article
+                  key={heroImage.id}
+                  className="border border-foreground/10 bg-card/60 p-5"
+                >
+                  <div className="grid gap-5 lg:grid-cols-[260px_minmax(0,1fr)]">
+                    <div className="space-y-3">
+                      <img
+                        src={heroImage.image}
+                        alt={heroImage.alt ?? 'Romantic Hamilton hero'}
+                        className="aspect-video w-full border border-foreground/10 bg-secondary object-cover"
+                      />
+                      <label className="flex cursor-pointer items-center justify-center gap-2 border border-foreground/15 px-3 py-2.5 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground">
+                        <ImageUp className="size-4" />
+                        {uploadingImageId === heroImage.id
+                          ? '업로드 중'
+                          : '사진 등록'}
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="sr-only"
+                          disabled={uploadingImageId === heroImage.id}
+                          onChange={(event) => {
+                            const file = event.target.files?.[0];
+                            event.target.value = '';
+                            if (!file) return;
+                            void uploadHeroImage(heroImage.id, file);
+                          }}
+                        />
+                      </label>
+                    </div>
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <label className="md:col-span-2">
+                        <span className="mb-2 block text-sm text-foreground/60">
+                          이미지 URL
+                        </span>
+                        <input
+                          value={heroImage.image}
+                          onChange={(event) =>
+                            updateHeroImage(heroImage.id, {
+                              image: event.target.value,
+                            })
+                          }
+                          className="w-full border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground"
+                        />
+                      </label>
+                      <label>
+                        <span className="mb-2 block text-sm text-foreground/60">
+                          대체 텍스트
+                        </span>
+                        <input
+                          value={heroImage.alt ?? ''}
+                          onChange={(event) =>
+                            updateHeroImage(heroImage.id, {
+                              alt: event.target.value || null,
+                            })
+                          }
+                          className="w-full border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground"
+                        />
+                      </label>
+                      <label>
+                        <span className="mb-2 block text-sm text-foreground/60">
+                          정렬
+                        </span>
+                        <input
+                          type="number"
+                          value={heroImage.sort_order}
+                          onChange={(event) =>
+                            updateHeroImage(heroImage.id, {
+                              sort_order: Number(event.target.value),
+                            })
+                          }
+                          className="w-full border-b border-foreground/20 bg-transparent py-2 outline-none focus:border-foreground"
+                        />
+                      </label>
+                      <div className="flex items-center justify-between gap-3 md:col-span-2">
+                        <label className="flex items-center gap-2 text-sm text-foreground/65">
+                          <input
+                            type="checkbox"
+                            checked={heroImage.is_active}
+                            onChange={(event) =>
+                              updateHeroImage(heroImage.id, {
+                                is_active: event.target.checked,
+                              })
+                            }
+                          />
+                          노출
+                        </label>
+                        <button
+                          type="button"
+                          disabled={updatingId === heroImage.id}
+                          onClick={() => void saveHeroImage(heroImage)}
+                          className="inline-flex items-center gap-2 border border-foreground/15 px-4 py-2.5 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground disabled:opacity-40"
+                        >
+                          <Save className="size-4" />
+                          저장
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </article>
+              ))}
+            </section>
+          )}
 
           {activeTab === 'products' && (
             <section className="space-y-4">
@@ -1298,7 +1601,9 @@ export default function AdminDashboard() {
                         onChange={(event) =>
                           reviewDeliveryChannel === 'email'
                             ? setReviewRecipientEmail(event.target.value)
-                            : setReviewRecipientPhone(event.target.value)
+                            : setReviewRecipientPhone(
+                                normalizePhoneNumber(event.target.value)
+                              )
                         }
                         placeholder={
                           reviewDeliveryChannel === 'email'
@@ -1551,6 +1856,12 @@ export default function AdminDashboard() {
                         <h2 className="text-xl font-semibold text-foreground">
                           {reservation.class_name}
                         </h2>
+                        <p className="mt-2 text-sm text-foreground/55">
+                          예약자: {getProfileDisplayName(
+                            profilesById[reservation.user_id],
+                            reservation.user_id
+                          )}
+                        </p>
                         {reservation.phone && (
                           <a
                             href={`tel:${reservation.phone}`}
@@ -1573,7 +1884,33 @@ export default function AdminDashboard() {
                       </p>
                     )}
 
+                    <label className="mb-4 block">
+                      <span className="mb-2 block text-sm text-foreground/60">
+                        관리자 메모
+                      </span>
+                      <textarea
+                        value={reservation.admin_note ?? ''}
+                        onChange={(event) =>
+                          updateReservationAdminNoteDraft(
+                            reservation.id,
+                            event.target.value
+                          )
+                        }
+                        rows={3}
+                        className="w-full resize-none border border-foreground/10 bg-background/60 p-3 text-sm leading-relaxed text-foreground/70 outline-none transition-colors focus:border-foreground/30"
+                        placeholder="관리자만 확인하는 메모를 입력하세요."
+                      />
+                    </label>
+
                     <div className="flex flex-wrap gap-2">
+                      <button
+                        type="button"
+                        disabled={updatingId === reservation.id}
+                        onClick={() => void saveReservationAdminNote(reservation)}
+                        className="border border-foreground/15 px-3 py-2 text-xs text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground disabled:opacity-40"
+                      >
+                        메모 저장
+                      </button>
                       {(['pending', 'confirmed', 'cancelled'] as const).map(
                         (status) => (
                           <button

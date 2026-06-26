@@ -39,6 +39,7 @@ export interface ClassReservation {
   preferred_date: string;
   phone: string;
   note: string | null;
+  admin_note?: string | null;
   status: 'pending' | 'confirmed' | 'cancelled';
   created_at: string;
 }
@@ -107,6 +108,16 @@ export interface WorkshopClass {
   level: 'beginner' | 'intermediate' | 'advanced';
   price: number;
   image: string;
+  is_active: boolean;
+  sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SiteHeroImage {
+  id: string;
+  image: string;
+  alt: string | null;
   is_active: boolean;
   sort_order: number;
   created_at?: string;
