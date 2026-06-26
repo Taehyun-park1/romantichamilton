@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { Link } from 'wouter';
 import { workshops as fallbackWorkshops } from '@/data/products';
 import {
   isSupabaseConfigured,
@@ -53,16 +54,24 @@ export default function Workshop() {
       className="scroll-mt-20 bg-background py-24 md:scroll-mt-24 md:py-36"
     >
       <div className="container">
-        <div className="mb-14 md:mb-20">
-          <p className="mb-3 text-xs uppercase tracking-[0.16em] text-accent">
-            Workshop
-          </p>
-          <h2 className="mb-4 text-3xl font-semibold text-foreground md:text-5xl">
-            직접 만들고 오래 사용하는 시간
-          </h2>
-          <p className="max-w-2xl text-base text-foreground/65">
-            가죽의 질감과 제작 과정을 가까이에서 경험할 수 있는 클래스입니다.
-          </p>
+        <div className="mb-14 flex flex-col gap-6 md:mb-20 md:flex-row md:items-end md:justify-between">
+          <div>
+            <p className="mb-3 text-xs uppercase tracking-[0.16em] text-accent">
+              Workshop
+            </p>
+            <h2 className="mb-4 text-3xl font-semibold text-foreground md:text-5xl">
+              직접 만들고 오래 사용하는 시간
+            </h2>
+            <p className="max-w-2xl text-base text-foreground/65">
+              가죽의 질감과 제작 과정을 가까이에서 경험할 수 있는 클래스입니다.
+            </p>
+          </div>
+          <Link
+            href="/reserve"
+            className="btn-outline inline-flex w-fit items-center justify-center self-start md:self-auto"
+          >
+            클래스 예약하기
+          </Link>
         </div>
 
         <div className="grid grid-cols-1 gap-8 md:grid-cols-3 lg:gap-10">

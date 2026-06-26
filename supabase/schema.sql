@@ -71,7 +71,7 @@ create table if not exists public.review_invites (
   id uuid primary key default gen_random_uuid(),
   token text not null unique,
   customer_name text,
-  review_type text not null default 'other' check (review_type in ('class', 'product', 'other')),
+  review_type text not null default 'class' check (review_type in ('class', 'product', 'other')),
   product_name text,
   class_name text,
   expires_at timestamptz not null default (now() + interval '7 days'),
@@ -117,6 +117,9 @@ alter table public.review_invites
 alter table public.review_invites
   add constraint review_invites_review_type_check
   check (review_type in ('class', 'product', 'other'));
+
+alter table public.review_invites
+  alter column review_type set default 'class';
 
 alter table public.workshop_reviews
   drop constraint if exists workshop_reviews_invite_id_fkey;
@@ -331,7 +334,7 @@ begin
     raise exception 'Only admins can create review invites.';
   end if;
 
-  if review_type not in ('class', 'product') then
+  if coalesce(review_type, '') not in ('class', 'product') then
     raise exception 'Invalid review type.';
   end if;
 
