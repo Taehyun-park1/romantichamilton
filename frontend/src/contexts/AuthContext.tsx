@@ -7,6 +7,7 @@ import {
   useState,
 } from 'react';
 import type { Session, User } from '@supabase/supabase-js';
+import { normalizePhoneNumber } from '@/lib/phone';
 import { isSupabaseConfigured, type Profile, supabase } from '@/lib/supabase';
 
 interface AuthContextValue {
@@ -57,6 +58,12 @@ function readDisplayName(user: User) {
   );
 }
 
+function readPhone(user: User) {
+  return typeof user.user_metadata.phone === 'string'
+    ? normalizePhoneNumber(user.user_metadata.phone)
+    : null;
+}
+
 async function upsertProfile(user: User) {
   if (!supabase) return null;
 
@@ -67,21 +74,24 @@ async function upsertProfile(user: User) {
     user.user_metadata.picture ||
     user.user_metadata.profile_image_url ||
     null;
+  const phone = readPhone(user);
+  const profilePayload: Record<string, unknown> = {
+    id: user.id,
+    email: readEmail(user),
+    display_name: displayName,
+    avatar_url: avatarUrl,
+    provider,
+    provider_user_id: providerUserId,
+    updated_at: new Date().toISOString(),
+  };
+
+  if (phone) {
+    profilePayload.phone = phone;
+  }
 
   const { data, error } = await supabase
     .from('profiles')
-    .upsert(
-      {
-        id: user.id,
-        email: readEmail(user),
-        display_name: displayName,
-        avatar_url: avatarUrl,
-        provider,
-        provider_user_id: providerUserId,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'id' }
-    )
+    .upsert(profilePayload, { onConflict: 'id' })
     .select('*')
     .single();
 

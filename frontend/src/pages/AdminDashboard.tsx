@@ -1536,6 +1536,14 @@ export default function AdminDashboard() {
                         <h2 className="text-xl font-semibold text-foreground">
                           {reservation.class_name}
                         </h2>
+                        {reservation.phone && (
+                          <a
+                            href={`tel:${reservation.phone}`}
+                            className="mt-2 block text-sm text-foreground/55"
+                          >
+                            {reservation.phone}
+                          </a>
+                        )}
                       </div>
                       <span
                         className={`w-fit border px-2 py-1 text-xs ${statusClassNames[reservation.status]}`}

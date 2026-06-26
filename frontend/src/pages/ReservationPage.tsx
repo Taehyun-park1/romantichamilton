@@ -22,6 +22,7 @@ import {
   isSupabaseConfigured,
   supabase,
 } from '@/lib/supabase';
+import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 import { cn } from '@/lib/utils';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -241,7 +242,7 @@ function ReservationNoteDisclosure({
 
 export default function ReservationPage() {
   const [, navigate] = useLocation();
-  const { user, profile, loading } = useAuth();
+  const { user, profile, loading, refreshProfile } = useAuth();
   const [reservations, setReservations] = useState<ClassReservation[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
@@ -255,6 +256,7 @@ export default function ReservationPage() {
   const [reservationDate, setReservationDate] = useState(() =>
     getLocalDateKey(new Date())
   );
+  const [reservationPhone, setReservationPhone] = useState('');
   const [datePickerOpen, setDatePickerOpen] = useState(false);
   const [reservationNote, setReservationNote] = useState('');
   const [reviewRating, setReviewRating] = useState(5);
@@ -345,6 +347,7 @@ export default function ReservationPage() {
   const openReservationCard = () => {
     setReviewReservation(null);
     setReservationDate(selectedDateKey ?? todayKey);
+    setReservationPhone(profile?.phone ?? '');
     setReservationClassName(classOptions[0]);
     setReservationNote('');
     setIsReservationCardOpen(true);
@@ -404,12 +407,45 @@ export default function ReservationPage() {
       return;
     }
 
+    const normalizedPhone = normalizePhoneNumber(reservationPhone);
+
+    if (!normalizedPhone || !isValidPhoneNumber(normalizedPhone)) {
+      toast.error('예약자 전화번호를 정확히 입력해 주세요.');
+      return;
+    }
+
     setSubmitting(true);
+
+    const currentProfilePhone = normalizePhoneNumber(profile?.phone ?? '');
+
+    if (normalizedPhone !== currentProfilePhone) {
+      const shouldUpdateProfilePhone = window.confirm(
+        currentProfilePhone
+          ? '입력한 전화번호가 기존 전화번호와 다릅니다. 기본 전화번호로 등록할까요?'
+          : '입력한 전화번호를 기본 전화번호로 등록할까요?'
+      );
+
+      if (shouldUpdateProfilePhone) {
+        const { error: profileError } = await supabase
+          .from('profiles')
+          .update({ phone: normalizedPhone, updated_at: new Date().toISOString() })
+          .eq('id', user.id);
+
+        if (profileError) {
+          toast.error(profileError.message);
+          setSubmitting(false);
+          return;
+        }
+
+        await refreshProfile();
+      }
+    }
 
     const { error } = await supabase.from('class_reservations').insert({
       user_id: user.id,
       class_name: reservationClassName,
       preferred_date: reservationDate,
+      phone: normalizedPhone,
       note: reservationNote.trim() || null,
       status: 'pending',
     });
@@ -717,6 +753,28 @@ export default function ReservationPage() {
                           />
                         </PopoverContent>
                       </Popover>
+                    </div>
+
+                    <div>
+                      <label
+                        htmlFor="reservationPhone"
+                        className="mb-2 block text-sm text-foreground/60"
+                      >
+                        예약자 전화번호
+                      </label>
+                      <input
+                        id="reservationPhone"
+                        type="tel"
+                        value={reservationPhone}
+                        onChange={(event) =>
+                          setReservationPhone(
+                            normalizePhoneNumber(event.target.value)
+                          )
+                        }
+                        required
+                        className="w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground"
+                        placeholder="010-1234-5678"
+                      />
                     </div>
 
                     <div>

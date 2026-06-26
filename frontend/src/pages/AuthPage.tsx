@@ -3,6 +3,7 @@ import { useLocation } from 'wouter';
 import { toast } from 'sonner';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
+import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
 
 type AuthMode = 'login' | 'signup';
 
@@ -11,6 +12,7 @@ export default function AuthPage() {
   const { isAuthenticated } = useAuth();
   const [mode, setMode] = useState<AuthMode>('login');
   const [displayName, setDisplayName] = useState('');
+  const [phone, setPhone] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [submitting, setSubmitting] = useState(false);
@@ -48,6 +50,13 @@ export default function AuthPage() {
       return;
     }
 
+    const normalizedPhone = normalizePhoneNumber(phone);
+
+    if (mode === 'signup' && normalizedPhone && !isValidPhoneNumber(normalizedPhone)) {
+      toast.error('전화번호 형식을 확인해 주세요.');
+      return;
+    }
+
     setSubmitting(true);
 
     try {
@@ -58,6 +67,7 @@ export default function AuthPage() {
           options: {
             data: {
               display_name: displayName,
+              phone: normalizedPhone || null,
             },
           },
         });
@@ -152,18 +162,36 @@ export default function AuthPage() {
 
           <form onSubmit={handleEmailAuth} className="space-y-6">
             {mode === 'signup' && (
-              <div>
-                <label htmlFor="displayName" className="mb-2 block text-sm text-foreground/60">
-                  이름 또는 닉네임
-                </label>
-                <input
-                  id="displayName"
-                  value={displayName}
-                  onChange={(event) => setDisplayName(event.target.value)}
-                  className="w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground"
-                  placeholder="표시할 이름"
-                />
-              </div>
+              <>
+                <div>
+                  <label htmlFor="displayName" className="mb-2 block text-sm text-foreground/60">
+                    이름 또는 닉네임
+                  </label>
+                  <input
+                    id="displayName"
+                    value={displayName}
+                    onChange={(event) => setDisplayName(event.target.value)}
+                    className="w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground"
+                    placeholder="표시할 이름"
+                  />
+                </div>
+
+                <div>
+                  <label htmlFor="signupPhone" className="mb-2 block text-sm text-foreground/60">
+                    전화번호 선택
+                  </label>
+                  <input
+                    id="signupPhone"
+                    type="tel"
+                    value={phone}
+                    onChange={(event) =>
+                      setPhone(normalizePhoneNumber(event.target.value))
+                    }
+                    className="w-full border-b border-foreground/20 bg-transparent py-3 outline-none transition-colors focus:border-foreground"
+                    placeholder="010-1234-5678"
+                  />
+                </div>
+              </>
             )}
 
             <div>

@@ -23,6 +23,7 @@ export interface Profile {
   id: string;
   email: string | null;
   display_name: string | null;
+  phone: string | null;
   avatar_url: string | null;
   provider: string | null;
   provider_user_id: string | null;
@@ -36,6 +37,7 @@ export interface ClassReservation {
   user_id: string;
   class_name: string;
   preferred_date: string;
+  phone: string;
   note: string | null;
   status: 'pending' | 'confirmed' | 'cancelled';
   created_at: string;

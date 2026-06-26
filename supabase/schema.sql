@@ -7,6 +7,7 @@ create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text,
   display_name text,
+  phone text,
   avatar_url text,
   provider text,
   provider_user_id text,
@@ -20,11 +21,26 @@ create table if not exists public.class_reservations (
   user_id uuid not null references auth.users(id) on delete cascade,
   class_name text not null,
   preferred_date date not null,
+  phone text not null default '',
   note text,
   status text not null default 'pending' check (status in ('pending', 'confirmed', 'cancelled')),
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.profiles
+  add column if not exists phone text;
+
+alter table public.class_reservations
+  add column if not exists phone text;
+
+update public.class_reservations
+set phone = ''
+where phone is null;
+
+alter table public.class_reservations
+  alter column phone set default '',
+  alter column phone set not null;
 
 create table if not exists public.workshop_reviews (
   id uuid primary key default gen_random_uuid(),
