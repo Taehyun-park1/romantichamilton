@@ -69,19 +69,6 @@ export default function Header() {
             Romantic Hamilton
           </a>
 
-          <a
-            href="#top"
-            onClick={handleLogoClick}
-            aria-label="Romantic Hamilton home"
-            className="site-header__center-logo"
-          >
-            <img
-              src="/rh-header-logo.jpg"
-              alt="Romantic Hamilton"
-              className="site-header__center-logo-image"
-            />
-          </a>
-
           {/* old: flex items-center gap-4 */}
           <div className="site-header__right">
             {/* old: hidden items-center gap-7 md:flex */}
