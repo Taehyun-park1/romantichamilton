@@ -21,6 +21,7 @@ import { fallbackHeroImages } from '@/components/Hero';
 import { products as fallbackProducts, workshops as fallbackWorkshops } from '@/data/products';
 import { useAuth } from '@/contexts/AuthContext';
 import { normalizePhoneNumber } from '@/lib/phone';
+import { getKoreanErrorMessage } from '@/lib/messages';
 import {
   type ClassReservation,
   type ContactInquiry,
@@ -330,25 +331,25 @@ export default function AdminDashboard() {
     }
 
     if (reservationResult.error) {
-      toast.error(reservationResult.error.message);
+      toast.error(getKoreanErrorMessage(reservationResult.error));
     } else {
       setReservations((reservationResult.data ?? []) as ClassReservation[]);
     }
 
     if (reviewResult.error) {
-      toast.error(reviewResult.error.message);
+      toast.error(getKoreanErrorMessage(reviewResult.error));
     } else {
       setReviews((reviewResult.data ?? []) as WorkshopReview[]);
     }
 
     if (inquiryResult.error) {
-      toast.error(inquiryResult.error.message);
+      toast.error(getKoreanErrorMessage(inquiryResult.error));
     } else {
       setInquiries((inquiryResult.data ?? []) as ContactInquiry[]);
     }
 
     if (profileResult.error) {
-      toast.error(profileResult.error.message);
+      toast.error(getKoreanErrorMessage(profileResult.error));
     } else {
       setProfiles((profileResult.data ?? []) as Profile[]);
     }
@@ -476,7 +477,7 @@ export default function AdminDashboard() {
       });
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getKoreanErrorMessage(error));
       return null;
     }
 
@@ -533,7 +534,7 @@ export default function AdminDashboard() {
     setUpdatingId(null);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getKoreanErrorMessage(error));
       return;
     }
 
@@ -553,7 +554,7 @@ export default function AdminDashboard() {
     setUpdatingId(null);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getKoreanErrorMessage(error));
       return;
     }
 
@@ -573,7 +574,7 @@ export default function AdminDashboard() {
     setUpdatingId(null);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getKoreanErrorMessage(error));
       return;
     }
 
@@ -601,7 +602,7 @@ export default function AdminDashboard() {
     setUpdatingId(null);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getKoreanErrorMessage(error));
       return;
     }
 
@@ -696,7 +697,7 @@ export default function AdminDashboard() {
     setUpdatingId(null);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getKoreanErrorMessage(error));
       return;
     }
 
@@ -719,7 +720,7 @@ export default function AdminDashboard() {
     setUpdatingId(null);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getKoreanErrorMessage(error));
       return;
     }
 
@@ -751,7 +752,7 @@ export default function AdminDashboard() {
     });
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getKoreanErrorMessage(error));
       return;
     }
 
@@ -861,7 +862,7 @@ export default function AdminDashboard() {
     setUpdatingId(null);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getKoreanErrorMessage(error));
       return;
     }
 
@@ -889,7 +890,7 @@ export default function AdminDashboard() {
     setUpdatingId(null);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getKoreanErrorMessage(error));
       return;
     }
 

@@ -23,6 +23,7 @@ import {
   supabase,
 } from '@/lib/supabase';
 import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
+import { getKoreanErrorMessage } from '@/lib/messages';
 import { cn } from '@/lib/utils';
 
 const WEEKDAYS = ['일', '월', '화', '수', '목', '금', '토'];
@@ -469,7 +470,7 @@ export default function ReservationPage() {
     setSubmitting(false);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getKoreanErrorMessage(error));
       return;
     }
 
@@ -512,7 +513,7 @@ export default function ReservationPage() {
     setReviewSubmitting(false);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getKoreanErrorMessage(error));
       return;
     }
 

@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
 import { useAuth } from '@/contexts/AuthContext';
 import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
+import { getKoreanErrorMessage } from '@/lib/messages';
 import '@/styles/auth.css';
 
 type AuthMode = 'login' | 'signup';
@@ -88,7 +89,7 @@ export default function AuthPage() {
       toast.success('로그인되었습니다.');
       navigate('/reserve');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : '인증 처리 중 오류가 발생했습니다.');
+      toast.error(getKoreanErrorMessage(error, '인증 처리 중 오류가 발생했습니다.'));
     } finally {
       setSubmitting(false);
     }
@@ -111,7 +112,7 @@ export default function AuthPage() {
     });
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getKoreanErrorMessage(error));
     }
   };
 

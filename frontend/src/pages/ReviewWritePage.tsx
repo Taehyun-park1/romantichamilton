@@ -3,6 +3,7 @@ import { Star } from 'lucide-react';
 import { toast } from 'sonner';
 import Header from '@/components/Header';
 import { isSupabaseConfigured, supabase } from '@/lib/supabase';
+import { getKoreanErrorMessage } from '@/lib/messages';
 import '@/styles/review-write.css';
 
 type InviteStatus = 'loading' | 'valid' | 'invalid' | 'used' | 'expired' | 'submitted';
@@ -135,7 +136,7 @@ export default function ReviewWritePage() {
     setSubmitting(false);
 
     if (error) {
-      toast.error(error.message);
+      toast.error(getKoreanErrorMessage(error));
       return;
     }
 
