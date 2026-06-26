@@ -6,6 +6,7 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Footer from "./components/Footer";
+import ScrollToTop from "./components/ScrollToTop";
 import AdminDashboard from "./pages/AdminDashboard";
 import AuthPage from "./pages/AuthPage";
 import Home from "./pages/Home";
@@ -13,7 +14,6 @@ import MyPage from "./pages/MyPage";
 import ReservationPage from "./pages/ReservationPage";
 import ReviewsPage from "./pages/ReviewsPage";
 import ReviewWritePage from "./pages/ReviewWritePage";
-
 
 function Router() {
   return (
@@ -49,6 +49,7 @@ function App() {
         <TooltipProvider>
           <AuthProvider>
             <Toaster />
+            <ScrollToTop />
             <Router />
             <Footer />
           </AuthProvider>
