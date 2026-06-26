@@ -42,6 +42,15 @@ interface ReviewInviteEmailRequestBody {
   message?: unknown;
 }
 
+interface ReservationConfirmationEmailRequestBody {
+  email?: unknown;
+  customerName?: unknown;
+  className?: unknown;
+  preferredDate?: unknown;
+  phone?: unknown;
+  note?: unknown;
+}
+
 interface ResendErrorResponse {
   message?: string;
   name?: string;
@@ -399,6 +408,103 @@ async function sendReviewInviteEmail(body: ReviewInviteEmailRequestBody) {
   }
 }
 
+async function sendReservationConfirmationEmail(
+  body: ReservationConfirmationEmailRequestBody
+) {
+  const email = normalizeText(body.email, 254).toLowerCase();
+  const customerName = normalizeText(body.customerName, 60) || "고객";
+  const className = normalizeText(body.className, 120);
+  const preferredDate = normalizeText(body.preferredDate, 40);
+  const phone = normalizeText(body.phone, 30);
+  const note = normalizeText(body.note, 1000);
+
+  if (!isValidEmail(email) || !className || !preferredDate) {
+    throw new Error("invalid_reservation_confirmation_payload");
+  }
+
+  const resendApiKey = process.env.RESEND_API_KEY;
+  const fromEmail =
+    process.env.RESEND_FROM_EMAIL || "contact@mail.romantichamilton.store";
+
+  if (!resendApiKey) {
+    throw new Error("resend_not_configured");
+  }
+
+  const safeName = escapeHtml(customerName);
+  const safeClassName = escapeHtml(className);
+  const safePreferredDate = escapeHtml(preferredDate);
+  const safePhone = escapeHtml(phone);
+  const safeNote = escapeHtml(note).replace(/\n/g, "<br />");
+
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${resendApiKey}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({
+      from: `Romantic Hamilton <${fromEmail}>`,
+      to: [email],
+      subject: "[Romantic Hamilton] 클래스 예약이 확정되었습니다",
+      text: [
+        `${customerName}님, 안녕하세요.`,
+        "",
+        "Romantic Hamilton 클래스 예약이 확정되었습니다.",
+        "",
+        `클래스: ${className}`,
+        `예약 날짜: ${preferredDate}`,
+        phone ? `연락처: ${phone}` : "",
+        note ? `요청사항: ${note}` : "",
+        "",
+        "예약 관련 변경이 필요하시면 Romantic Hamilton으로 문의해 주세요.",
+      ]
+        .filter(Boolean)
+        .join("\n"),
+      html: `<!doctype html>
+        <html>
+          <body style="margin:0;background:#f4f0ea;padding:32px;font-family:Arial,'Apple SD Gothic Neo','Malgun Gothic',sans-serif;color:#241f1b;">
+            <div style="max-width:560px;margin:0 auto;background:#ffffff;border:1px solid #e5ddd3;padding:32px;">
+              <p style="margin:0 0 12px;font-size:12px;letter-spacing:0.16em;text-transform:uppercase;color:#9a6a43;">Romantic Hamilton</p>
+              <h1 style="margin:0 0 20px;font-size:24px;font-weight:600;">클래스 예약이 확정되었습니다</h1>
+              <p style="margin:0 0 24px;font-size:15px;line-height:1.7;color:#5f554c;">${safeName}님, 예약해 주셔서 감사합니다. 아래 일정으로 클래스 예약이 확정되었습니다.</p>
+              <table role="presentation" style="width:100%;border-collapse:collapse;margin:0 0 24px;">
+                <tr>
+                  <td style="width:96px;padding:10px 0;border-top:1px solid #eee7dd;color:#8b8178;font-size:13px;">클래스</td>
+                  <td style="padding:10px 0;border-top:1px solid #eee7dd;font-size:14px;">${safeClassName}</td>
+                </tr>
+                <tr>
+                  <td style="width:96px;padding:10px 0;border-top:1px solid #eee7dd;color:#8b8178;font-size:13px;">예약 날짜</td>
+                  <td style="padding:10px 0;border-top:1px solid #eee7dd;font-size:14px;">${safePreferredDate}</td>
+                </tr>
+                ${
+                  safePhone
+                    ? `<tr><td style="width:96px;padding:10px 0;border-top:1px solid #eee7dd;color:#8b8178;font-size:13px;">연락처</td><td style="padding:10px 0;border-top:1px solid #eee7dd;font-size:14px;">${safePhone}</td></tr>`
+                    : ""
+                }
+                ${
+                  safeNote
+                    ? `<tr><td style="width:96px;padding:10px 0;border-top:1px solid #eee7dd;color:#8b8178;font-size:13px;">요청사항</td><td style="padding:10px 0;border-top:1px solid #eee7dd;font-size:14px;line-height:1.6;">${safeNote}</td></tr>`
+                    : ""
+                }
+              </table>
+              <p style="margin:0;font-size:13px;line-height:1.7;color:#8b8178;">예약 관련 변경이 필요하시면 Romantic Hamilton으로 문의해 주세요.</p>
+            </div>
+          </body>
+        </html>`,
+    }),
+  });
+
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => ({}))) as ResendErrorResponse;
+    console.error("Resend reservation confirmation email failed", {
+      status: response.status,
+      name: payload.name,
+      message: payload.message,
+    });
+    throw new Error("resend_send_failed");
+  }
+}
+
 async function createSupabaseMagicLink(profile: Required<NaverProfileResponse>["response"]) {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -550,6 +656,37 @@ async function startServer() {
 
       console.error("Review invite email send failed", error);
       res.status(503).json({ error: "review_invite_email_unavailable" });
+    }
+  });
+
+  app.post("/api/reservations/confirmation-email", async (req, res) => {
+    try {
+      const isAdmin = await verifyAdminRequest(req);
+
+      if (!isAdmin) {
+        res.status(403).json({ error: "admin_required" });
+        return;
+      }
+
+      await sendReservationConfirmationEmail(
+        (req.body ?? {}) as ReservationConfirmationEmailRequestBody
+      );
+      res.status(200).json({ success: true });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : "reservation_confirmation_email_failed";
+
+      if (message === "invalid_reservation_confirmation_payload") {
+        res.status(400).json({ error: message });
+        return;
+      }
+
+      console.error("Reservation confirmation email send failed", error);
+      res.status(503).json({
+        error: "reservation_confirmation_email_unavailable",
+      });
     }
   });
 

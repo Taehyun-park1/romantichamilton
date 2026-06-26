@@ -344,6 +344,24 @@ export default function ReservationPage() {
     );
   };
 
+  const selectCalendarDate = (
+    dateKey: string,
+    canSelectDate: boolean,
+    isPastDate: boolean
+  ) => {
+    if (!canSelectDate) return;
+
+    setSelectedDateKey((currentDateKey) => {
+      const nextDateKey = currentDateKey === dateKey ? null : dateKey;
+
+      if (isReservationCardOpen && nextDateKey && !isPastDate) {
+        setReservationDate(nextDateKey);
+      }
+
+      return nextDateKey;
+    });
+  };
+
   const openReservationCard = () => {
     setReviewReservation(null);
     setReservationDate(selectedDateKey ?? todayKey);
@@ -589,12 +607,9 @@ export default function ReservationPage() {
                       key={dateKey}
                       type="button"
                       disabled={!canSelectDate}
-                      onClick={() => {
-                        if (!canSelectDate) return;
-                        setSelectedDateKey((currentDateKey) =>
-                          currentDateKey === dateKey ? null : dateKey
-                        );
-                      }}
+                      onClick={() =>
+                        selectCalendarDate(dateKey, canSelectDate, isPastDate)
+                      }
                       className={[
                         'relative min-h-28 border-b border-r border-foreground/10 p-2 pt-11 text-left transition-colors last:border-r-0 md:min-h-32',
                         isPastDate

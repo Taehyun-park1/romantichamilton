@@ -165,6 +165,10 @@ function getProfileDisplayName(profile: Profile | undefined, fallbackId: string)
   );
 }
 
+function isDeliverableEmail(email: string | null | undefined) {
+  return Boolean(email && !email.endsWith('@auth.romantichamilton.local'));
+}
+
 function createAdminItemId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
@@ -586,6 +590,11 @@ export default function AdminDashboard() {
   ) => {
     if (!supabase) return;
 
+    const targetReservation = reservations.find(
+      (reservation) => reservation.id === reservationId
+    );
+    const previousStatus = targetReservation?.status;
+
     setUpdatingId(reservationId);
 
     const { error } = await supabase
@@ -606,6 +615,60 @@ export default function AdminDashboard() {
       )
     );
     toast.success('예약 상태가 변경되었습니다.');
+
+    if (
+      status !== 'confirmed' ||
+      previousStatus === 'confirmed' ||
+      !targetReservation
+    ) {
+      return;
+    }
+
+    const reservationProfile = profilesById[targetReservation.user_id];
+    const recipientEmail = reservationProfile?.email;
+
+    if (!isDeliverableEmail(recipientEmail)) {
+      toast.info('예약자 이메일이 없어 확정 메일은 건너뛰었습니다.');
+      return;
+    }
+
+    if (!session?.access_token) {
+      toast.error('관리자 인증이 만료되어 확정 메일을 보내지 못했습니다.');
+      return;
+    }
+
+    try {
+      const response = await fetch(
+        `${apiBaseUrl ?? ''}/api/reservations/confirmation-email`,
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${session.access_token}`,
+          },
+          body: JSON.stringify({
+            email: recipientEmail,
+            customerName: getProfileDisplayName(
+              reservationProfile,
+              targetReservation.user_id
+            ),
+            className: targetReservation.class_name,
+            preferredDate: formatDate(targetReservation.preferred_date),
+            phone: targetReservation.phone,
+            note: targetReservation.note,
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error('reservation_confirmation_email_failed');
+      }
+
+      toast.success('예약 확정 메일을 보냈습니다.');
+    } catch (emailError) {
+      console.error('Reservation confirmation email failed', emailError);
+      toast.error('예약은 확정됐지만 확정 메일 발송에 실패했습니다.');
+    }
   };
 
   const updateReservationAdminNoteDraft = (
