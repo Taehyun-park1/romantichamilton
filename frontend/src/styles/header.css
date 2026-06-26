@@ -5,7 +5,7 @@
 }
 
 .site-header__inner {
-  @apply relative w-full px-5 md:px-6;
+  @apply relative w-full px-6 md:px-10 lg:px-12;
 }
 
 .site-header__bar {
