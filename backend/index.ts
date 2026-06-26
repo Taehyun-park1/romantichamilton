@@ -1,12 +1,43 @@
 import express from "express";
 import { createServer } from "http";
 import crypto from "crypto";
+import fs from "fs";
 import path from "path";
 import { fileURLToPath } from "url";
 import { renderContactEmailHtml } from "./email/contactEmailTemplate";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+const projectRoot = path.resolve(__dirname, "..");
+
+function loadLocalEnvFile(fileName: string) {
+  const envPath = path.join(projectRoot, fileName);
+
+  if (!fs.existsSync(envPath)) return;
+
+  const lines = fs.readFileSync(envPath, "utf8").split(/\r?\n/);
+
+  for (const line of lines) {
+    const trimmedLine = line.trim();
+
+    if (!trimmedLine || trimmedLine.startsWith("#")) continue;
+
+    const separatorIndex = trimmedLine.indexOf("=");
+    if (separatorIndex === -1) continue;
+
+    const key = trimmedLine.slice(0, separatorIndex).trim();
+    const rawValue = trimmedLine.slice(separatorIndex + 1).trim();
+
+    if (!key || process.env[key] !== undefined) continue;
+
+    process.env[key] = rawValue.replace(/^["']|["']$/g, "");
+  }
+}
+
+if (process.env.NODE_ENV !== "production") {
+  loadLocalEnvFile(".env.local");
+  loadLocalEnvFile(".env.backend.local");
+}
 
 interface NaverProfileResponse {
   resultcode?: string;
@@ -43,6 +74,7 @@ interface ReviewInviteEmailRequestBody {
 }
 
 interface ReservationConfirmationEmailRequestBody {
+  reservationId?: unknown;
   email?: unknown;
   customerName?: unknown;
   className?: unknown;
@@ -61,6 +93,15 @@ interface ValidContactPayload {
   phone: string;
   email: string;
   message: string;
+}
+
+interface ReservationConfirmationPayload {
+  email: string;
+  customerName: string;
+  className: string;
+  preferredDate: string;
+  phone: string;
+  note: string;
 }
 
 const CONTACT_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
@@ -106,6 +147,10 @@ function isValidEmail(value: string) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
+function isDeliverableEmail(value: string) {
+  return isValidEmail(value) && !value.endsWith("@auth.romantichamilton.local");
+}
+
 function readSupabaseRestConfig() {
   const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
   const serviceRoleKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -131,6 +176,142 @@ function validateContactPayload(body: ContactRequestBody): ValidContactPayload {
   }
 
   return { name, phone, email, message };
+}
+
+function createSupabaseHeaders(config: NonNullable<ReturnType<typeof readSupabaseRestConfig>>) {
+  const token = config.serviceRoleKey || config.anonKey;
+
+  if (!token) {
+    throw new Error("supabase_rest_not_configured");
+  }
+
+  return {
+    apikey: token,
+    Authorization: `Bearer ${token}`,
+    "Content-Type": "application/json",
+  };
+}
+
+async function readReservationConfirmationPayload(
+  body: ReservationConfirmationEmailRequestBody
+): Promise<ReservationConfirmationPayload> {
+  const reservationId = normalizeText(body.reservationId, 80);
+
+  if (!reservationId) {
+    const email = normalizeText(body.email, 254).toLowerCase();
+    const customerName = normalizeText(body.customerName, 60) || "고객";
+    const className = normalizeText(body.className, 120);
+    const preferredDate = normalizeText(body.preferredDate, 40);
+    const phone = normalizeText(body.phone, 30);
+    const note = normalizeText(body.note, 1000);
+
+    if (!isDeliverableEmail(email) || !className || !preferredDate) {
+      throw new Error("invalid_reservation_confirmation_payload");
+    }
+
+    return { email, customerName, className, preferredDate, phone, note };
+  }
+
+  const config = readSupabaseRestConfig();
+
+  if (!config?.serviceRoleKey) {
+    throw new Error("supabase_admin_not_configured");
+  }
+
+  const headers = createSupabaseHeaders(config);
+  const reservationResponse = await fetch(
+    `${config.url}/rest/v1/class_reservations?id=eq.${encodeURIComponent(
+      reservationId
+    )}&select=id,user_id,class_name,preferred_date,phone,note&limit=1`,
+    { headers }
+  );
+
+  if (!reservationResponse.ok) {
+    throw new Error("reservation_lookup_failed");
+  }
+
+  const reservations = (await reservationResponse.json()) as Array<{
+    id: string;
+    user_id: string;
+    class_name: string;
+    preferred_date: string;
+    phone?: string | null;
+    note?: string | null;
+  }>;
+  const reservation = reservations[0];
+
+  if (!reservation) {
+    throw new Error("reservation_not_found");
+  }
+
+  const profileResponse = await fetch(
+    `${config.url}/rest/v1/profiles?id=eq.${encodeURIComponent(
+      reservation.user_id
+    )}&select=email,display_name&limit=1`,
+    { headers }
+  );
+
+  const profiles = profileResponse.ok
+    ? ((await profileResponse.json()) as Array<{
+        email?: string | null;
+        display_name?: string | null;
+      }>)
+    : [];
+  const profile = profiles[0];
+
+  let email = normalizeText(profile?.email, 254).toLowerCase();
+  let customerName =
+    normalizeText(profile?.display_name, 60) ||
+    normalizeText(profile?.email, 60) ||
+    "고객";
+
+  if (!isDeliverableEmail(email)) {
+    const userResponse = await fetch(
+      `${config.url}/auth/v1/admin/users/${encodeURIComponent(
+        reservation.user_id
+      )}`,
+      {
+        headers: {
+          apikey: config.serviceRoleKey,
+          Authorization: `Bearer ${config.serviceRoleKey}`,
+        },
+      }
+    );
+
+    if (userResponse.ok) {
+      const authUser = (await userResponse.json()) as {
+        email?: string | null;
+        user_metadata?: {
+          real_email?: string | null;
+          display_name?: string | null;
+          name?: string | null;
+        };
+      };
+      const realEmail = normalizeText(authUser.user_metadata?.real_email, 254)
+        .toLowerCase();
+      const authEmail = normalizeText(authUser.email, 254).toLowerCase();
+
+      email = isDeliverableEmail(realEmail) ? realEmail : authEmail;
+      customerName =
+        customerName ||
+        normalizeText(authUser.user_metadata?.display_name, 60) ||
+        normalizeText(authUser.user_metadata?.name, 60) ||
+        "고객";
+    }
+  }
+
+  if (!isDeliverableEmail(email)) {
+    throw new Error("reservation_email_missing");
+  }
+
+  return {
+    email,
+    customerName,
+    className: reservation.class_name,
+    preferredDate: reservation.preferred_date,
+    phone: reservation.phone ?? "",
+    note: reservation.note ?? "",
+  };
 }
 
 function escapeHtml(value: string) {
@@ -411,16 +592,8 @@ async function sendReviewInviteEmail(body: ReviewInviteEmailRequestBody) {
 async function sendReservationConfirmationEmail(
   body: ReservationConfirmationEmailRequestBody
 ) {
-  const email = normalizeText(body.email, 254).toLowerCase();
-  const customerName = normalizeText(body.customerName, 60) || "고객";
-  const className = normalizeText(body.className, 120);
-  const preferredDate = normalizeText(body.preferredDate, 40);
-  const phone = normalizeText(body.phone, 30);
-  const note = normalizeText(body.note, 1000);
-
-  if (!isValidEmail(email) || !className || !preferredDate) {
-    throw new Error("invalid_reservation_confirmation_payload");
-  }
+  const { email, customerName, className, preferredDate, phone, note } =
+    await readReservationConfirmationPayload(body);
 
   const resendApiKey = process.env.RESEND_API_KEY;
   const fromEmail =
@@ -680,6 +853,24 @@ async function startServer() {
 
       if (message === "invalid_reservation_confirmation_payload") {
         res.status(400).json({ error: message });
+        return;
+      }
+
+      if (message === "reservation_not_found") {
+        res.status(404).json({ error: message });
+        return;
+      }
+
+      if (message === "reservation_email_missing") {
+        res.status(422).json({ error: message });
+        return;
+      }
+
+      if (
+        message === "supabase_admin_not_configured" ||
+        message === "resend_not_configured"
+      ) {
+        res.status(503).json({ error: message });
         return;
       }
 

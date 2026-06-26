@@ -165,10 +165,6 @@ function getProfileDisplayName(profile: Profile | undefined, fallbackId: string)
   );
 }
 
-function isDeliverableEmail(email: string | null | undefined) {
-  return Boolean(email && !email.endsWith('@auth.romantichamilton.local'));
-}
-
 function createAdminItemId(prefix: string) {
   return `${prefix}-${Date.now()}-${Math.random().toString(16).slice(2, 8)}`;
 }
@@ -624,14 +620,6 @@ export default function AdminDashboard() {
       return;
     }
 
-    const reservationProfile = profilesById[targetReservation.user_id];
-    const recipientEmail = reservationProfile?.email;
-
-    if (!isDeliverableEmail(recipientEmail)) {
-      toast.info('예약자 이메일이 없어 확정 메일은 건너뛰었습니다.');
-      return;
-    }
-
     if (!session?.access_token) {
       toast.error('관리자 인증이 만료되어 확정 메일을 보내지 못했습니다.');
       return;
@@ -647,15 +635,7 @@ export default function AdminDashboard() {
             Authorization: `Bearer ${session.access_token}`,
           },
           body: JSON.stringify({
-            email: recipientEmail,
-            customerName: getProfileDisplayName(
-              reservationProfile,
-              targetReservation.user_id
-            ),
-            className: targetReservation.class_name,
-            preferredDate: formatDate(targetReservation.preferred_date),
-            phone: targetReservation.phone,
-            note: targetReservation.note,
+            reservationId: targetReservation.id,
           }),
         }
       );
