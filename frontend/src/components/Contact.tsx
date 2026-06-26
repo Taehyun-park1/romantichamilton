@@ -6,7 +6,7 @@ const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)
   ?.replace(/\/+$/, '');
 
 export default function Contact() {
-  const { profile } = useAuth();
+  const { session, profile } = useAuth();
   const [formData, setFormData] = useState({
     name: '',
     phone: '',
@@ -57,6 +57,9 @@ export default function Contact() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(session?.access_token
+            ? { Authorization: `Bearer ${session.access_token}` }
+            : {}),
         },
         body: JSON.stringify(formData),
       });

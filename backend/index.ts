@@ -175,6 +175,30 @@ async function verifyAdminRequest(req: express.Request) {
   return profiles[0]?.role === "admin";
 }
 
+async function readAuthenticatedUserId(req: express.Request) {
+  const authorization = req.get("authorization") || "";
+  const token = authorization.replace(/^Bearer\s+/i, "");
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
+  const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+
+  if (!token || !supabaseUrl || !anonKey) {
+    return null;
+  }
+
+  const normalizedSupabaseUrl = supabaseUrl.replace(/\/rest\/v1\/?$/, "").replace(/\/+$/, "");
+  const response = await fetch(`${normalizedSupabaseUrl}/auth/v1/user`, {
+    headers: {
+      apikey: anonKey,
+      Authorization: `Bearer ${token}`,
+    },
+  });
+
+  if (!response.ok) return null;
+
+  const user = (await response.json()) as { id?: string };
+  return user.id ?? null;
+}
+
 function isContactRateLimited(ip: string) {
   const now = Date.now();
   const recentRequests = (contactRequestsByIp.get(ip) ?? []).filter(
@@ -259,6 +283,7 @@ async function sendContactEmail(body: ContactRequestBody) {
 
 async function saveContactInquiry(
   body: ContactRequestBody,
+  userId: string,
   emailSent: boolean,
   emailError?: string
 ) {
@@ -279,6 +304,7 @@ async function saveContactInquiry(
     },
     body: JSON.stringify({
       ...payload,
+      user_id: userId,
       status: "new",
       email_sent: emailSent,
       email_error: emailError ? emailError.slice(0, 500) : null,
@@ -459,10 +485,20 @@ async function startServer() {
       return;
     }
 
+    const userId = await readAuthenticatedUserId(req);
+
     try {
       validateContactPayload(body);
       await sendContactEmail(body);
-      await saveContactInquiry(body, true);
+
+      if (userId) {
+        try {
+          await saveContactInquiry(body, userId, true);
+        } catch (saveError) {
+          console.error("Contact inquiry save failed after email sent", saveError);
+        }
+      }
+
       res.status(200).json({ success: true });
     } catch (error) {
       const message = error instanceof Error ? error.message : "contact_failed";
@@ -472,10 +508,12 @@ async function startServer() {
         return;
       }
 
-      try {
-        await saveContactInquiry(body, false, message);
-      } catch (saveError) {
-        console.error("Contact inquiry save after failure failed", saveError);
+      if (userId) {
+        try {
+          await saveContactInquiry(body, userId, false, message);
+        } catch (saveError) {
+          console.error("Contact inquiry save after failure failed", saveError);
+        }
       }
 
       console.error("Contact request failed", { message });

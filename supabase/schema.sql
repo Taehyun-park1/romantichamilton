@@ -81,6 +81,7 @@ create table if not exists public.review_invites (
 
 create table if not exists public.contact_inquiries (
   id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id) on delete set null,
   name text not null,
   phone text not null,
   email text not null,
@@ -91,6 +92,9 @@ create table if not exists public.contact_inquiries (
   created_at timestamptz not null default now(),
   updated_at timestamptz not null default now()
 );
+
+alter table public.contact_inquiries
+  add column if not exists user_id uuid references auth.users(id) on delete set null;
 
 update public.workshop_reviews
 set review_type = 'other'
@@ -439,10 +443,12 @@ using (public.is_admin())
 with check (public.is_admin());
 
 drop policy if exists "contact_inquiries_public_insert" on public.contact_inquiries;
-create policy "contact_inquiries_public_insert"
+
+drop policy if exists "contact_inquiries_insert_own" on public.contact_inquiries;
+create policy "contact_inquiries_insert_own"
 on public.contact_inquiries
 for insert
-with check (true);
+with check (auth.uid() = user_id);
 
 drop policy if exists "contact_inquiries_admin_all" on public.contact_inquiries;
 create policy "contact_inquiries_admin_all"

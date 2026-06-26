@@ -432,12 +432,10 @@ export default function ReservationPage() {
           .eq('id', user.id);
 
         if (profileError) {
-          toast.error(profileError.message);
-          setSubmitting(false);
-          return;
+          toast.error('기본 전화번호 저장은 실패했지만 예약은 계속 진행합니다.');
+        } else {
+          await refreshProfile();
         }
-
-        await refreshProfile();
       }
     }
 
