@@ -16,6 +16,14 @@
   @apply text-base font-semibold text-foreground md:text-lg;
 }
 
+.site-header__center-logo {
+  @apply absolute left-1/2 top-1/2 hidden -translate-x-1/2 -translate-y-1/2 sm:block;
+}
+
+.site-header__center-logo-image {
+  @apply h-10 w-auto object-contain md:h-12;
+}
+
 .site-header__right {
   @apply flex items-center gap-4;
 }
