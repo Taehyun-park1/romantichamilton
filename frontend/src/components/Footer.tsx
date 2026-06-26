@@ -1,4 +1,4 @@
-import { Mail, MapPin, Phone } from 'lucide-react';
+import { Mail, MapPin, Phone } from "lucide-react";
 
 export default function Footer() {
   return (
@@ -24,7 +24,7 @@ export default function Footer() {
                 className="flex items-center gap-2 text-sm text-background/70 transition-colors hover:text-background"
               >
                 <Phone size={16} />
-                +82 10-1234-5678
+                010-8077-4776
               </a>
               <a
                 href="mailto:hello@romantichamilton.com"
