@@ -708,19 +708,32 @@ export default function AdminDashboard() {
     reviewId: string,
     status: WorkshopReview['status']
   ) => {
-    if (!supabase) return;
+    if (!session?.access_token) {
+      toast.error('관리자 로그인이 필요합니다.');
+      return;
+    }
 
     setUpdatingId(reviewId);
 
-    const { error } = await supabase
-      .from('workshop_reviews')
-      .update({ status, updated_at: new Date().toISOString() })
-      .eq('id', reviewId);
+    const response = await fetch(`${apiBaseUrl ?? ''}/api/admin/reviews/status`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        Authorization: `Bearer ${session.access_token}`,
+      },
+      body: JSON.stringify({
+        reviewId,
+        status,
+      }),
+    });
 
     setUpdatingId(null);
 
-    if (error) {
-      toast.error(getKoreanErrorMessage(error));
+    if (!response.ok) {
+      const payload = (await response.json().catch(() => null)) as {
+        error?: string;
+      } | null;
+      toast.error(getKoreanErrorMessage(payload?.error || 'review_status_update_failed'));
       return;
     }
 

@@ -88,6 +88,11 @@ interface ReviewImageUploadRequestBody {
   images?: unknown;
 }
 
+interface ReviewStatusUpdateRequestBody {
+  reviewId?: unknown;
+  status?: unknown;
+}
+
 interface ReviewImagePayload {
   fileName?: unknown;
   mimeType?: unknown;
@@ -526,6 +531,50 @@ async function uploadReviewImages(body: ReviewImageUploadRequestBody) {
   }
 
   return uploadedUrls;
+}
+
+async function updateWorkshopReviewStatus(body: ReviewStatusUpdateRequestBody) {
+  const reviewId = normalizeText(body.reviewId, 80);
+  const status = normalizeText(body.status, 20);
+  const allowedStatuses = new Set(["pending", "approved", "hidden"]);
+
+  if (!reviewId || !allowedStatuses.has(status)) {
+    throw new Error("invalid_review_status_payload");
+  }
+
+  const config = readSupabaseRestConfig();
+
+  if (!config?.serviceRoleKey) {
+    throw new Error("supabase_admin_not_configured");
+  }
+
+  const response = await fetch(
+    `${config.url}/rest/v1/workshop_reviews?id=eq.${encodeURIComponent(
+      reviewId
+    )}`,
+    {
+      method: "PATCH",
+      headers: {
+        apikey: config.serviceRoleKey,
+        Authorization: `Bearer ${config.serviceRoleKey}`,
+        "Content-Type": "application/json",
+        Prefer: "return=minimal",
+      },
+      body: JSON.stringify({
+        status,
+        updated_at: new Date().toISOString(),
+      }),
+    }
+  );
+
+  if (!response.ok) {
+    const errorText = await response.text().catch(() => "");
+    console.error("Workshop review status update failed", {
+      status: response.status,
+      body: errorText.slice(0, 500),
+    });
+    throw new Error("review_status_update_failed");
+  }
 }
 
 function isContactRateLimited(ip: string) {
@@ -1016,6 +1065,38 @@ async function startServer() {
 
       console.error("Review image upload request failed", error);
       res.status(503).json({ error: "review_image_upload_failed" });
+    }
+  });
+
+  app.post("/api/admin/reviews/status", async (req, res) => {
+    try {
+      const isAdmin = await verifyAdminRequest(req);
+
+      if (!isAdmin) {
+        res.status(403).json({ error: "admin_required" });
+        return;
+      }
+
+      await updateWorkshopReviewStatus(
+        (req.body ?? {}) as ReviewStatusUpdateRequestBody
+      );
+      res.status(200).json({ success: true });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "review_status_update_failed";
+
+      if (message === "invalid_review_status_payload") {
+        res.status(400).json({ error: message });
+        return;
+      }
+
+      if (message === "supabase_admin_not_configured") {
+        res.status(503).json({ error: message });
+        return;
+      }
+
+      console.error("Review status update request failed", error);
+      res.status(503).json({ error: "review_status_update_failed" });
     }
   });
 

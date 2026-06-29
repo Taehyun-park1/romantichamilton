@@ -19,6 +19,7 @@ const messageMap: Record<string, string> = {
   review_image_too_large: '사진은 한 장당 5MB 이하만 첨부할 수 있습니다.',
   review_image_upload_failed: '리뷰 사진을 업로드하지 못했습니다.',
   review_image_upload_forbidden: '리뷰 사진을 업로드할 권한이 없습니다.',
+  review_status_update_failed: '리뷰 상태를 변경하지 못했습니다.',
   supabase_admin_not_configured: '관리자 서버 설정이 필요합니다.',
   supabase_rest_not_configured: '데이터베이스 연결 설정이 필요합니다.',
   too_many_review_images: '사진은 최대 6장까지 첨부할 수 있습니다.',
