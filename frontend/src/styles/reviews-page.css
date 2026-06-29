@@ -47,6 +47,18 @@
   @apply border border-foreground/10 bg-card/60 p-6 text-sm text-foreground/55;
 }
 
+.reviews-page__filters {
+  @apply mb-8 flex flex-wrap gap-2;
+}
+
+.reviews-page__filter {
+  @apply border border-foreground/15 px-4 py-2 text-sm text-foreground/60 transition-colors hover:border-foreground/35 hover:text-foreground;
+}
+
+.reviews-page__filter--active {
+  @apply border-foreground bg-foreground text-background hover:text-background;
+}
+
 .reviews-page__grid {
   @apply grid gap-4 md:grid-cols-2 lg:grid-cols-3;
 }

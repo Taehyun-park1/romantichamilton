@@ -164,6 +164,7 @@ export default function Reviews() {
         .from("workshop_reviews")
         .select("*")
         .eq("status", "approved")
+        .order("rating", { ascending: false })
         .order("created_at", { ascending: false })
         .limit(6);
 
