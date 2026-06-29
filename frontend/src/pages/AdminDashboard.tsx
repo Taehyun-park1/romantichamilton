@@ -9,6 +9,7 @@ import {
   Mail,
   MessageSquareText,
   Package,
+  Palette,
   Plus,
   RefreshCw,
   Save,
@@ -23,6 +24,11 @@ import { useAuth } from '@/contexts/AuthContext';
 import { normalizePhoneNumber } from '@/lib/phone';
 import { getKoreanErrorMessage } from '@/lib/messages';
 import {
+  applyDesignPreset,
+  designPresets,
+  type SiteDesignPresetId,
+} from '@/lib/designPresets';
+import {
   type ClassReservation,
   type ContactInquiry,
   isSupabaseConfigured,
@@ -35,6 +41,7 @@ import {
 } from '@/lib/supabase';
 
 type AdminTab =
+  | 'design'
   | 'carousel'
   | 'products'
   | 'classes'
@@ -230,7 +237,7 @@ function createDraftHeroImage(sortOrder: number): SiteHeroImage {
 export default function AdminDashboard() {
   const [, navigate] = useLocation();
   const { session, loading, isAuthenticated, isAdmin } = useAuth();
-  const [activeTab, setActiveTab] = useState<AdminTab>('carousel');
+  const [activeTab, setActiveTab] = useState<AdminTab>('design');
   const [heroImages, setHeroImages] = useState<SiteHeroImage[]>(
     fallbackHeroImages.map(toHeroImage)
   );
@@ -240,6 +247,8 @@ export default function AdminDashboard() {
   const [classes, setClasses] = useState<WorkshopClass[]>(
     fallbackWorkshops.map(toWorkshopClass)
   );
+  const [activeDesignPresetId, setActiveDesignPresetId] =
+    useState<SiteDesignPresetId>('default');
   const [reservations, setReservations] = useState<ClassReservation[]>([]);
   const [reviews, setReviews] = useState<WorkshopReview[]>([]);
   const [inquiries, setInquiries] = useState<ContactInquiry[]>([]);
@@ -285,6 +294,7 @@ export default function AdminDashboard() {
       reviewResult,
       inquiryResult,
       profileResult,
+      designResult,
     ] =
       await Promise.all([
         supabaseClient
@@ -316,6 +326,11 @@ export default function AdminDashboard() {
           .from('profiles')
           .select('*')
           .order('created_at', { ascending: false }),
+        supabaseClient
+          .from('site_design_settings')
+          .select('*')
+          .eq('id', 'active')
+          .maybeSingle(),
       ]);
 
     if (!heroResult.error && heroResult.data?.length) {
@@ -352,6 +367,12 @@ export default function AdminDashboard() {
       toast.error(getKoreanErrorMessage(profileResult.error));
     } else {
       setProfiles((profileResult.data ?? []) as Profile[]);
+    }
+
+    if (!designResult.error && designResult.data?.preset_id) {
+      const presetId = designResult.data.preset_id as SiteDesignPresetId;
+      setActiveDesignPresetId(presetId);
+      applyDesignPreset(presetId);
     }
 
     setDataLoading(false);
@@ -579,6 +600,33 @@ export default function AdminDashboard() {
     }
 
     toast.success('클래스 정보가 저장되었습니다.');
+  };
+
+  const saveDesignPreset = async () => {
+    if (!supabase) return;
+
+    setUpdatingId('design-preset');
+
+    const { error } = await supabase.from('site_design_settings').upsert({
+      id: 'active',
+      preset_id: activeDesignPresetId,
+      updated_at: new Date().toISOString(),
+    });
+
+    setUpdatingId(null);
+
+    if (error) {
+      toast.error(getKoreanErrorMessage(error));
+      return;
+    }
+
+    applyDesignPreset(activeDesignPresetId);
+    window.dispatchEvent(
+      new CustomEvent('site-design-preset-updated', {
+        detail: { presetId: activeDesignPresetId },
+      })
+    );
+    toast.success('디자인 프리셋이 저장되었습니다.');
   };
 
   const updateReservationStatus = async (
@@ -1013,6 +1061,7 @@ export default function AdminDashboard() {
 
           <div className="mb-6 flex gap-2 overflow-x-auto border-b border-foreground/10">
             {[
+              ['design', '디자인'],
               ['carousel', '캐러셀 관리'],
               ['products', '제품 관리'],
               ['classes', '클래스 관리'],
@@ -1034,6 +1083,106 @@ export default function AdminDashboard() {
               </button>
             ))}
           </div>
+
+          {activeTab === 'design' && (
+            <section className="space-y-5">
+              <div className="border border-foreground/10 bg-card/60 p-5">
+                <div className="mb-5 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                  <div>
+                    <p className="mb-2 flex items-center gap-2 text-xs uppercase tracking-[0.14em] text-accent">
+                      <Palette className="size-4" />
+                      Design Preset
+                    </p>
+                    <h2 className="text-2xl font-semibold text-foreground">
+                      시즌 디자인 프리셋
+                    </h2>
+                    <p className="mt-2 max-w-2xl text-sm leading-relaxed text-foreground/55">
+                      계절이나 기념일에 맞춰 사이트 전체 색감을 빠르게 바꿀 수 있습니다.
+                      저장하면 방문자 화면에도 같은 프리셋이 적용됩니다.
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    disabled={updatingId === 'design-preset'}
+                    onClick={() => void saveDesignPreset()}
+                    className="inline-flex items-center justify-center gap-2 border border-foreground/15 px-4 py-2.5 text-sm text-foreground/65 transition-colors hover:border-foreground/35 hover:text-foreground disabled:opacity-40"
+                  >
+                    <Save className="size-4" />
+                    저장
+                  </button>
+                </div>
+
+                <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+                  {designPresets.map((preset) => {
+                    const selected = activeDesignPresetId === preset.id;
+
+                    return (
+                      <button
+                        key={preset.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveDesignPresetId(preset.id);
+                          applyDesignPreset(preset.id);
+                        }}
+                        className={`border p-4 text-left transition-colors ${
+                          selected
+                            ? 'border-foreground bg-foreground text-background'
+                            : 'border-foreground/10 bg-background/60 text-foreground hover:border-foreground/30'
+                        }`}
+                      >
+                        <div className="mb-4 flex items-start justify-between gap-3">
+                          <div>
+                            <p
+                              className={`text-xs uppercase tracking-[0.14em] ${
+                                selected ? 'text-background/60' : 'text-accent'
+                              }`}
+                            >
+                              {preset.season}
+                            </p>
+                            <h3 className="mt-2 text-xl font-semibold">
+                              {preset.name}
+                            </h3>
+                          </div>
+                          {selected && (
+                            <span className="border border-background/20 px-2 py-1 text-xs text-background/75">
+                              선택됨
+                            </span>
+                          )}
+                        </div>
+                        <p
+                          className={`mb-5 text-sm leading-relaxed ${
+                            selected ? 'text-background/70' : 'text-foreground/55'
+                          }`}
+                        >
+                          {preset.description}
+                        </p>
+                        <div className="flex gap-2">
+                          {[
+                            preset.variables['--background'],
+                            preset.variables['--foreground'],
+                            preset.variables['--primary'],
+                            preset.variables['--accent'],
+                            preset.variables['--secondary'],
+                          ].map((color) => (
+                            <span
+                              key={color}
+                              className={`size-7 border ${
+                                selected
+                                  ? 'border-background/25'
+                                  : 'border-foreground/10'
+                              }`}
+                              style={{ backgroundColor: color }}
+                              aria-hidden="true"
+                            />
+                          ))}
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            </section>
+          )}
 
           {activeTab === 'carousel' && (
             <section className="space-y-4">

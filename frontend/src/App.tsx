@@ -7,6 +7,7 @@ import { AuthProvider } from "./contexts/AuthContext";
 import { ThemeProvider } from "./contexts/ThemeContext";
 import Footer from "./components/Footer";
 import ScrollToTop from "./components/ScrollToTop";
+import DesignPresetProvider from "./components/DesignPresetProvider";
 import AdminDashboard from "./pages/AdminDashboard";
 import AuthPage from "./pages/AuthPage";
 import Home from "./pages/Home";
@@ -48,6 +49,7 @@ function App() {
       >
         <TooltipProvider>
           <AuthProvider>
+            <DesignPresetProvider />
             <Toaster />
             <ScrollToTop />
             <Router />

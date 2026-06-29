@@ -173,6 +173,24 @@ create table if not exists public.site_hero_images (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.site_design_settings (
+  id text primary key default 'active',
+  preset_id text not null default 'default'
+    check (preset_id in ('default', 'chuseok', 'christmas', 'seollal', 'valentine')),
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
+insert into public.site_design_settings (
+  id,
+  preset_id
+)
+values (
+  'active',
+  'default'
+)
+on conflict (id) do nothing;
+
 insert into public.site_hero_images (
   id,
   image,
@@ -240,6 +258,7 @@ alter table public.contact_inquiries enable row level security;
 alter table public.site_products enable row level security;
 alter table public.workshop_classes enable row level security;
 alter table public.site_hero_images enable row level security;
+alter table public.site_design_settings enable row level security;
 
 create or replace function public.is_admin()
 returns boolean
@@ -556,6 +575,19 @@ using (is_active = true or public.is_admin());
 drop policy if exists "site_hero_images_admin_all" on public.site_hero_images;
 create policy "site_hero_images_admin_all"
 on public.site_hero_images
+for all
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "site_design_settings_public_select" on public.site_design_settings;
+create policy "site_design_settings_public_select"
+on public.site_design_settings
+for select
+using (id = 'active');
+
+drop policy if exists "site_design_settings_admin_all" on public.site_design_settings;
+create policy "site_design_settings_admin_all"
+on public.site_design_settings
 for all
 using (public.is_admin())
 with check (public.is_admin());

@@ -18,6 +18,12 @@ export const supabase = isSupabaseConfigured
   : null;
 
 export type UserRole = 'user' | 'admin';
+export type SiteDesignPresetId =
+  | 'default'
+  | 'chuseok'
+  | 'christmas'
+  | 'seollal'
+  | 'valentine';
 
 export interface Profile {
   id: string;
@@ -121,6 +127,13 @@ export interface SiteHeroImage {
   alt: string | null;
   is_active: boolean;
   sort_order: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface SiteDesignSetting {
+  id: 'active';
+  preset_id: SiteDesignPresetId;
   created_at?: string;
   updated_at?: string;
 }
