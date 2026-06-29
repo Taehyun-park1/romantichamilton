@@ -47,8 +47,12 @@
   @apply border border-foreground/10 bg-card/60 p-6 text-sm text-foreground/55;
 }
 
+.reviews-page__toolbar {
+  @apply mb-8 flex flex-col gap-4 md:flex-row md:items-center md:justify-between;
+}
+
 .reviews-page__filters {
-  @apply mb-8 flex flex-wrap gap-2;
+  @apply flex flex-wrap gap-2;
 }
 
 .reviews-page__filter {
@@ -59,6 +63,39 @@
   @apply border-foreground bg-foreground text-background hover:text-background;
 }
 
+.reviews-page__sort {
+  @apply flex w-full items-center gap-3 md:w-auto;
+}
+
+.reviews-page__sort-label {
+  @apply shrink-0 text-sm text-foreground/55;
+}
+
+.reviews-page__sort-select {
+  @apply h-10 w-full min-w-44 border border-foreground/15 bg-background px-3 text-sm text-foreground outline-none transition-colors focus:border-foreground md:w-auto;
+}
+
 .reviews-page__grid {
   @apply grid gap-4 md:grid-cols-2 lg:grid-cols-3;
+}
+
+.reviews-page__pagination {
+  @apply mt-10 flex flex-wrap items-center justify-center gap-2;
+}
+
+.reviews-page__page-button,
+.reviews-page__page-number {
+  @apply border border-foreground/15 px-3 py-2 text-sm text-foreground/60 transition-colors hover:border-foreground/35 hover:text-foreground disabled:pointer-events-none disabled:opacity-35;
+}
+
+.reviews-page__page-number {
+  @apply min-w-10;
+}
+
+.reviews-page__page-number--active {
+  @apply border-foreground bg-foreground text-background hover:text-background;
+}
+
+.reviews-page__page-numbers {
+  @apply flex flex-wrap items-center justify-center gap-2;
 }

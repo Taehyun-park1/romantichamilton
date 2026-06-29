@@ -12,6 +12,9 @@ import {
 import "@/styles/reviews-page.css";
 
 type ReviewFilter = "all" | "class" | "product";
+type ReviewSort = "rating-desc" | "rating-asc" | "newest" | "oldest";
+
+const REVIEWS_PER_PAGE = 9;
 
 const reviewFilters: Array<{ label: string; value: ReviewFilter }> = [
   { label: "전체", value: "all" },
@@ -19,12 +22,45 @@ const reviewFilters: Array<{ label: string; value: ReviewFilter }> = [
   { label: "제품", value: "product" },
 ];
 
+const reviewSortOptions: Array<{ label: string; value: ReviewSort }> = [
+  { label: "별점 높은순", value: "rating-desc" },
+  { label: "별점 낮은순", value: "rating-asc" },
+  { label: "최신순", value: "newest" },
+  { label: "오래된순", value: "oldest" },
+];
+
+function getReviewTime(review: WorkshopReview) {
+  return new Date(review.created_at).getTime();
+}
+
+function sortReviews(reviews: WorkshopReview[], sort: ReviewSort) {
+  return [...reviews].sort((left, right) => {
+    if (sort === "rating-desc") {
+      if (right.rating !== left.rating) return right.rating - left.rating;
+      return getReviewTime(right) - getReviewTime(left);
+    }
+
+    if (sort === "rating-asc") {
+      if (left.rating !== right.rating) return left.rating - right.rating;
+      return getReviewTime(right) - getReviewTime(left);
+    }
+
+    if (sort === "oldest") {
+      return getReviewTime(left) - getReviewTime(right);
+    }
+
+    return getReviewTime(right) - getReviewTime(left);
+  });
+}
+
 export default function ReviewsPage() {
   const [reviews, setReviews] = useState<WorkshopReview[]>(fallbackReviews);
   const [loading, setLoading] = useState(
     Boolean(supabase && isSupabaseConfigured)
   );
   const [activeFilter, setActiveFilter] = useState<ReviewFilter>("all");
+  const [activeSort, setActiveSort] = useState<ReviewSort>("rating-desc");
+  const [currentPage, setCurrentPage] = useState(1);
 
   useEffect(() => {
     if (!supabase || !isSupabaseConfigured) return;
@@ -56,6 +92,10 @@ export default function ReviewsPage() {
     };
   }, []);
 
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter, activeSort]);
+
   const filteredReviews = useMemo(
     () =>
       activeFilter === "all"
@@ -63,6 +103,21 @@ export default function ReviewsPage() {
         : reviews.filter((review) => review.review_type === activeFilter),
     [activeFilter, reviews]
   );
+
+  const sortedReviews = useMemo(
+    () => sortReviews(filteredReviews, activeSort),
+    [activeSort, filteredReviews]
+  );
+
+  const totalPages = Math.max(1, Math.ceil(sortedReviews.length / REVIEWS_PER_PAGE));
+  const paginatedReviews = sortedReviews.slice(
+    (currentPage - 1) * REVIEWS_PER_PAGE,
+    currentPage * REVIEWS_PER_PAGE
+  );
+
+  const movePage = (nextPage: number) => {
+    setCurrentPage(Math.min(Math.max(nextPage, 1), totalPages));
+  };
 
   return (
     <>
@@ -78,35 +133,96 @@ export default function ReviewsPage() {
             </p>
           </div>
 
-          <div className="reviews-page__filters" aria-label="리뷰 유형 선택">
-            {reviewFilters.map((filter) => (
-              <button
-                key={filter.value}
-                type="button"
-                onClick={() => setActiveFilter(filter.value)}
-                className={`reviews-page__filter ${
-                  activeFilter === filter.value
-                    ? "reviews-page__filter--active"
-                    : ""
-                }`}
+          <div className="reviews-page__toolbar">
+            <div className="reviews-page__filters" aria-label="리뷰 유형 선택">
+              {reviewFilters.map((filter) => (
+                <button
+                  key={filter.value}
+                  type="button"
+                  onClick={() => setActiveFilter(filter.value)}
+                  className={`reviews-page__filter ${
+                    activeFilter === filter.value
+                      ? "reviews-page__filter--active"
+                      : ""
+                  }`}
+                >
+                  {filter.label}
+                </button>
+              ))}
+            </div>
+
+            <label className="reviews-page__sort">
+              <span className="reviews-page__sort-label">정렬</span>
+              <select
+                value={activeSort}
+                onChange={(event) =>
+                  setActiveSort(event.target.value as ReviewSort)
+                }
+                className="reviews-page__sort-select"
               >
-                {filter.label}
-              </button>
-            ))}
+                {reviewSortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
 
           {loading ? (
             <p className="reviews-page__message">리뷰를 불러오는 중입니다.</p>
-          ) : filteredReviews.length === 0 ? (
+          ) : paginatedReviews.length === 0 ? (
             <p className="reviews-page__message">
               아직 게시된 리뷰가 없습니다.
             </p>
           ) : (
-            <div className="reviews-page__grid">
-              {filteredReviews.map((review) => (
-                <ReviewCard key={review.id} review={review} />
-              ))}
-            </div>
+            <>
+              <div className="reviews-page__grid">
+                {paginatedReviews.map((review) => (
+                  <ReviewCard key={review.id} review={review} />
+                ))}
+              </div>
+
+              {totalPages > 1 && (
+                <nav className="reviews-page__pagination" aria-label="리뷰 페이지">
+                  <button
+                    type="button"
+                    onClick={() => movePage(currentPage - 1)}
+                    disabled={currentPage === 1}
+                    className="reviews-page__page-button"
+                  >
+                    이전
+                  </button>
+                  <div className="reviews-page__page-numbers">
+                    {Array.from({ length: totalPages }, (_, index) => index + 1).map(
+                      (page) => (
+                        <button
+                          key={page}
+                          type="button"
+                          onClick={() => movePage(page)}
+                          className={`reviews-page__page-number ${
+                            currentPage === page
+                              ? "reviews-page__page-number--active"
+                              : ""
+                          }`}
+                          aria-current={currentPage === page ? "page" : undefined}
+                        >
+                          {page}
+                        </button>
+                      )
+                    )}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => movePage(currentPage + 1)}
+                    disabled={currentPage === totalPages}
+                    className="reviews-page__page-button"
+                  >
+                    다음
+                  </button>
+                </nav>
+              )}
+            </>
           )}
         </section>
       </main>
