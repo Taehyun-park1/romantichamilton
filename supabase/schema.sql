@@ -592,7 +592,3 @@ for select
 using (bucket_id = 'review-images');
 
 drop policy if exists "review_images_public_insert" on storage.objects;
-create policy "review_images_public_insert"
-on storage.objects
-for insert
-with check (bucket_id = 'review-images');

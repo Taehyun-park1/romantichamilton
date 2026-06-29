@@ -248,7 +248,7 @@ function ReservationNoteDisclosure({
 
 export default function ReservationPage() {
   const [, navigate] = useLocation();
-  const { user, profile, loading, refreshProfile } = useAuth();
+  const { user, profile, session, loading, refreshProfile } = useAuth();
   const [reservations, setReservations] = useState<ClassReservation[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
@@ -510,7 +510,9 @@ export default function ReservationPage() {
     let imageUrls: string[] = [];
 
     try {
-      imageUrls = await uploadReviewImages(supabase, reviewImageFiles);
+      imageUrls = await uploadReviewImages(reviewImageFiles, {
+        accessToken: session?.access_token,
+      });
     } catch (error) {
       setReviewSubmitting(false);
       toast.error(getKoreanErrorMessage(error, '사진을 업로드하지 못했습니다.'));

@@ -134,7 +134,9 @@ export default function ReviewWritePage() {
     let imageUrls: string[] = [];
 
     try {
-      imageUrls = await uploadReviewImages(supabase, imageFiles);
+      imageUrls = await uploadReviewImages(imageFiles, {
+        inviteToken: token,
+      });
     } catch (error) {
       setSubmitting(false);
       toast.error(getKoreanErrorMessage(error, '사진을 업로드하지 못했습니다.'));

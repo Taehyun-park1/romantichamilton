@@ -1,8 +1,8 @@
-import type { SupabaseClient } from '@supabase/supabase-js';
-
-export const REVIEW_IMAGE_BUCKET = 'review-images';
 export const MAX_REVIEW_IMAGE_COUNT = 6;
 export const MAX_REVIEW_IMAGE_SIZE = 5 * 1024 * 1024;
+
+const apiBaseUrl = (import.meta.env.VITE_API_BASE_URL as string | undefined)
+  ?.replace(/\/+$/, '');
 
 export function validateReviewImageFiles(files: File[]) {
   if (files.length > MAX_REVIEW_IMAGE_COUNT) {
@@ -22,19 +22,25 @@ export function validateReviewImageFiles(files: File[]) {
   return null;
 }
 
-function getSafeReviewImageName(file: File, index: number) {
-  const extension = file.name.split('.').pop()?.toLowerCase() || 'jpg';
-  const randomId =
-    typeof crypto !== 'undefined' && 'randomUUID' in crypto
-      ? crypto.randomUUID()
-      : `${Date.now()}-${Math.random().toString(16).slice(2)}`;
+function readFileAsBase64(file: File) {
+  return new Promise<string>((resolve, reject) => {
+    const reader = new FileReader();
 
-  return `reviews/${randomId}-${index}.${extension}`;
+    reader.onload = () => {
+      const result = typeof reader.result === 'string' ? reader.result : '';
+      resolve(result.split(',')[1] ?? '');
+    };
+    reader.onerror = () => reject(reader.error);
+    reader.readAsDataURL(file);
+  });
 }
 
 export async function uploadReviewImages(
-  supabase: SupabaseClient,
-  files: File[]
+  files: File[],
+  options: {
+    inviteToken?: string;
+    accessToken?: string;
+  } = {}
 ) {
   const validationMessage = validateReviewImageFiles(files);
 
@@ -42,26 +48,36 @@ export async function uploadReviewImages(
     throw new Error(validationMessage);
   }
 
-  const uploadedUrls: string[] = [];
+  if (files.length === 0) return [];
 
-  for (let index = 0; index < files.length; index += 1) {
-    const file = files[index];
-    const filePath = getSafeReviewImageName(file, index);
-    const { error } = await supabase.storage
-      .from(REVIEW_IMAGE_BUCKET)
-      .upload(filePath, file, {
-        cacheControl: '31536000',
-        upsert: false,
-      });
+  const images = await Promise.all(
+    files.map(async (file) => ({
+      fileName: file.name,
+      mimeType: file.type,
+      base64: await readFileAsBase64(file),
+    }))
+  );
+  const response = await fetch(`${apiBaseUrl ?? ''}/api/review-images/upload`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(options.accessToken
+        ? { Authorization: `Bearer ${options.accessToken}` }
+        : {}),
+    },
+    body: JSON.stringify({
+      inviteToken: options.inviteToken,
+      images,
+    }),
+  });
 
-    if (error) throw error;
-
-    const { data } = supabase.storage
-      .from(REVIEW_IMAGE_BUCKET)
-      .getPublicUrl(filePath);
-
-    uploadedUrls.push(data.publicUrl);
+  if (!response.ok) {
+    const payload = (await response.json().catch(() => null)) as {
+      error?: string;
+    } | null;
+    throw new Error(payload?.error || 'review_image_upload_failed');
   }
 
-  return uploadedUrls;
+  const payload = (await response.json()) as { imageUrls?: string[] };
+  return payload.imageUrls ?? [];
 }

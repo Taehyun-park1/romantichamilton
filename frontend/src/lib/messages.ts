@@ -16,12 +16,17 @@ const messageMap: Record<string, string> = {
   resend_send_failed: '메일 발송에 실패했습니다.',
   review_invite_email_failed: '리뷰 요청 메일을 보내지 못했습니다.',
   review_invite_email_unavailable: '리뷰 요청 메일 서비스를 잠시 사용할 수 없습니다.',
+  review_image_too_large: '사진은 한 장당 5MB 이하만 첨부할 수 있습니다.',
+  review_image_upload_failed: '리뷰 사진을 업로드하지 못했습니다.',
+  review_image_upload_forbidden: '리뷰 사진을 업로드할 권한이 없습니다.',
   supabase_admin_not_configured: '관리자 서버 설정이 필요합니다.',
   supabase_rest_not_configured: '데이터베이스 연결 설정이 필요합니다.',
+  too_many_review_images: '사진은 최대 6장까지 첨부할 수 있습니다.',
 };
 
 const partialMessageMap: Array<[RegExp, string]> = [
   [/Failed to fetch/i, '서버에 연결하지 못했습니다. 잠시 후 다시 시도해 주세요.'],
+  [/Bucket not found/i, '리뷰 사진 저장소가 아직 생성되지 않았습니다.'],
   [/Invalid login credentials/i, '이메일 또는 비밀번호가 올바르지 않습니다.'],
   [/Email not confirmed/i, '이메일 인증 후 로그인해 주세요.'],
   [/User already registered/i, '이미 가입된 이메일입니다.'],

@@ -83,6 +83,17 @@ interface ReservationConfirmationEmailRequestBody {
   note?: unknown;
 }
 
+interface ReviewImageUploadRequestBody {
+  inviteToken?: unknown;
+  images?: unknown;
+}
+
+interface ReviewImagePayload {
+  fileName?: unknown;
+  mimeType?: unknown;
+  base64?: unknown;
+}
+
 interface ResendErrorResponse {
   message?: string;
   name?: string;
@@ -106,6 +117,8 @@ interface ReservationConfirmationPayload {
 
 const CONTACT_RATE_LIMIT_WINDOW_MS = 10 * 60 * 1000;
 const CONTACT_RATE_LIMIT_MAX_REQUESTS = 5;
+const MAX_REVIEW_IMAGE_COUNT = 6;
+const MAX_REVIEW_IMAGE_SIZE_BYTES = 5 * 1024 * 1024;
 const contactRequestsByIp = new Map<string, number[]>();
 
 function getRequestOrigin(req: express.Request) {
@@ -372,17 +385,18 @@ async function verifyAdminRequest(req: express.Request) {
 async function readAuthenticatedUserId(req: express.Request) {
   const authorization = req.get("authorization") || "";
   const token = authorization.replace(/^Bearer\s+/i, "");
-  const supabaseUrl = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL;
-  const anonKey = process.env.SUPABASE_ANON_KEY || process.env.VITE_SUPABASE_ANON_KEY;
+  const config = readSupabaseRestConfig();
 
-  if (!token || !supabaseUrl || !anonKey) {
+  if (!token || !config) {
     return null;
   }
 
-  const normalizedSupabaseUrl = supabaseUrl.replace(/\/rest\/v1\/?$/, "").replace(/\/+$/, "");
-  const response = await fetch(`${normalizedSupabaseUrl}/auth/v1/user`, {
+  const apiKey = config.anonKey || config.serviceRoleKey;
+  if (!apiKey) return null;
+
+  const response = await fetch(`${config.url}/auth/v1/user`, {
     headers: {
-      apikey: anonKey,
+      apikey: apiKey,
       Authorization: `Bearer ${token}`,
     },
   });
@@ -391,6 +405,127 @@ async function readAuthenticatedUserId(req: express.Request) {
 
   const user = (await response.json()) as { id?: string };
   return user.id ?? null;
+}
+
+async function hasValidReviewInvite(inviteToken: string) {
+  const config = readSupabaseRestConfig();
+
+  if (!config?.serviceRoleKey) {
+    throw new Error("supabase_admin_not_configured");
+  }
+
+  const response = await fetch(
+    `${config.url}/rest/v1/review_invites?token=eq.${encodeURIComponent(
+      inviteToken
+    )}&select=id,expires_at,used_at&limit=1`,
+    {
+      headers: {
+        apikey: config.serviceRoleKey,
+        Authorization: `Bearer ${config.serviceRoleKey}`,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    throw new Error("review_invite_lookup_failed");
+  }
+
+  const invites = (await response.json()) as Array<{
+    expires_at?: string;
+    used_at?: string | null;
+  }>;
+  const invite = invites[0];
+
+  return Boolean(
+    invite &&
+      !invite.used_at &&
+      invite.expires_at &&
+      new Date(invite.expires_at).getTime() > Date.now()
+  );
+}
+
+function normalizeImagePayloads(images: unknown) {
+  if (!Array.isArray(images) || images.length === 0) {
+    throw new Error("invalid_review_image_payload");
+  }
+
+  if (images.length > MAX_REVIEW_IMAGE_COUNT) {
+    throw new Error("too_many_review_images");
+  }
+
+  return images.map((image, index) => {
+    const payload = image as ReviewImagePayload;
+    const fileName = normalizeText(payload.fileName, 120) || `review-${index}.jpg`;
+    const mimeType = normalizeText(payload.mimeType, 80);
+    const base64 = normalizeText(payload.base64, MAX_REVIEW_IMAGE_SIZE_BYTES * 2);
+
+    if (!mimeType.startsWith("image/") || !base64) {
+      throw new Error("invalid_review_image_payload");
+    }
+
+    const buffer = Buffer.from(base64, "base64");
+
+    if (buffer.byteLength > MAX_REVIEW_IMAGE_SIZE_BYTES) {
+      throw new Error("review_image_too_large");
+    }
+
+    return { fileName, mimeType, buffer };
+  });
+}
+
+function getStorageSafeExtension(fileName: string, mimeType: string) {
+  const extension = fileName.split(".").pop()?.toLowerCase();
+
+  if (extension && /^[a-z0-9]+$/.test(extension)) return extension;
+  if (mimeType === "image/png") return "png";
+  if (mimeType === "image/webp") return "webp";
+  if (mimeType === "image/gif") return "gif";
+  return "jpg";
+}
+
+async function uploadReviewImages(body: ReviewImageUploadRequestBody) {
+  const config = readSupabaseRestConfig();
+
+  if (!config?.serviceRoleKey) {
+    throw new Error("supabase_admin_not_configured");
+  }
+
+  const imagePayloads = normalizeImagePayloads(body.images);
+  const uploadedUrls: string[] = [];
+
+  for (let index = 0; index < imagePayloads.length; index += 1) {
+    const image = imagePayloads[index];
+    const extension = getStorageSafeExtension(image.fileName, image.mimeType);
+    const filePath = `reviews/${crypto.randomUUID()}-${index}.${extension}`;
+    const response = await fetch(
+      `${config.url}/storage/v1/object/review-images/${filePath}`,
+      {
+        method: "POST",
+        headers: {
+          apikey: config.serviceRoleKey,
+          Authorization: `Bearer ${config.serviceRoleKey}`,
+          "Content-Type": image.mimeType,
+          "x-upsert": "false",
+        },
+        body: image.buffer,
+      }
+    );
+
+    if (!response.ok) {
+      const errorText = await response.text().catch(() => "");
+      console.error("Review image upload failed", {
+        status: response.status,
+        body: errorText.slice(0, 500),
+      });
+      throw new Error("review_image_upload_failed");
+    }
+
+    uploadedUrls.push(
+      `${config.url}/storage/v1/object/public/review-images/${filePath}`
+    );
+  }
+
+  return uploadedUrls;
 }
 
 function isContactRateLimited(ip: string) {
@@ -736,7 +871,7 @@ async function startServer() {
   const app = express();
   const server = createServer(app);
   app.set("trust proxy", 1);
-  app.use(express.json({ limit: "16kb" }));
+  app.use(express.json({ limit: "40mb" }));
 
   app.use("/api", (req, res, next) => {
     const origin = req.get("origin");
@@ -834,6 +969,53 @@ async function startServer() {
 
       console.error("Review invite email send failed", error);
       res.status(503).json({ error: "review_invite_email_unavailable" });
+    }
+  });
+
+  app.post("/api/review-images/upload", async (req, res) => {
+    try {
+      const body = (req.body ?? {}) as ReviewImageUploadRequestBody;
+      const inviteToken = normalizeText(body.inviteToken, 200);
+      const userId = await readAuthenticatedUserId(req);
+      const canUploadWithInvite = inviteToken
+        ? await hasValidReviewInvite(inviteToken)
+        : false;
+
+      if (!userId && !canUploadWithInvite) {
+        res.status(403).json({ error: "review_image_upload_forbidden" });
+        return;
+      }
+
+      const imageUrls = await uploadReviewImages(body);
+      res.status(200).json({ imageUrls });
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : "review_image_upload_failed";
+
+      if (
+        message === "invalid_review_image_payload" ||
+        message === "too_many_review_images" ||
+        message === "review_image_too_large"
+      ) {
+        res.status(400).json({ error: message });
+        return;
+      }
+
+      if (
+        message === "review_image_upload_forbidden" ||
+        message === "review_invite_lookup_failed"
+      ) {
+        res.status(403).json({ error: message });
+        return;
+      }
+
+      if (message === "supabase_admin_not_configured") {
+        res.status(503).json({ error: message });
+        return;
+      }
+
+      console.error("Review image upload request failed", error);
+      res.status(503).json({ error: "review_image_upload_failed" });
     }
   });
 
