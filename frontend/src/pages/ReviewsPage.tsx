@@ -183,7 +183,7 @@ export default function ReviewsPage() {
                 ))}
               </div>
 
-              {totalPages > 1 && (
+              {sortedReviews.length > 0 && (
                 <nav className="reviews-page__pagination" aria-label="리뷰 페이지">
                   <button
                     type="button"
