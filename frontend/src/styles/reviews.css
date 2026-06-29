@@ -71,22 +71,6 @@
   @apply text-sm leading-relaxed text-foreground/70;
 }
 
-.reviews-section__images {
-  @apply mt-4 grid grid-cols-2 gap-2;
-}
-
-.reviews-section__image-wrap {
-  @apply relative aspect-square overflow-hidden bg-muted/30;
-}
-
-.reviews-section__image {
-  @apply h-full w-full object-cover;
-}
-
-.reviews-section__image-more {
-  @apply absolute inset-0 grid place-items-center bg-foreground/55 text-sm text-background;
-}
-
 .review-stars {
   @apply flex items-center gap-1;
 }
@@ -97,4 +81,36 @@
 
 .review-stars__star--active {
   @apply fill-accent text-accent;
+}
+
+.reviews-section__carousel {
+  @apply relative mt-4 aspect-[4/3] overflow-hidden bg-muted/30;
+}
+
+.reviews-section__carousel-image {
+  @apply h-full w-full object-cover;
+}
+
+.reviews-section__carousel-button {
+  @apply absolute top-1/2 grid size-8 -translate-y-1/2 place-items-center bg-background/85 text-foreground/70 shadow-sm transition-colors hover:bg-background hover:text-foreground;
+}
+
+.reviews-section__carousel-button--prev {
+  @apply left-2;
+}
+
+.reviews-section__carousel-button--next {
+  @apply right-2;
+}
+
+.reviews-section__carousel-dots {
+  @apply absolute bottom-2 left-0 right-0 flex items-center justify-center gap-1.5;
+}
+
+.reviews-section__carousel-dot {
+  @apply size-1.5 rounded-full bg-background/55 transition-colors;
+}
+
+.reviews-section__carousel-dot--active {
+  @apply w-4 bg-background;
 }

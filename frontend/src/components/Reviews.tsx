@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Star } from "lucide-react";
+import { ChevronLeft, ChevronRight, Star } from "lucide-react";
 import { Link } from "wouter";
 import {
   isSupabaseConfigured,
@@ -62,6 +62,23 @@ export function ReviewStars({ rating }: { rating: number }) {
 }
 
 export function ReviewCard({ review }: { review: WorkshopReview }) {
+  const imageUrls = review.image_urls ?? [];
+  const [activeImageIndex, setActiveImageIndex] = useState(0);
+  const hasMultipleImages = imageUrls.length > 1;
+  const activeImageUrl = imageUrls[activeImageIndex];
+
+  const showPreviousImage = () => {
+    setActiveImageIndex((currentIndex) =>
+      currentIndex === 0 ? imageUrls.length - 1 : currentIndex - 1
+    );
+  };
+
+  const showNextImage = () => {
+    setActiveImageIndex((currentIndex) =>
+      currentIndex === imageUrls.length - 1 ? 0 : currentIndex + 1
+    );
+  };
+
   return (
     <article
       key={review.id}
@@ -80,23 +97,53 @@ export function ReviewCard({ review }: { review: WorkshopReview }) {
       </div>
       {/* old: text-sm leading-relaxed text-foreground/70 */}
       <p className="reviews-section__content">{review.content}</p>
-      {review.image_urls && review.image_urls.length > 0 && (
-        <div className="reviews-section__images">
-          {review.image_urls.slice(0, 4).map((imageUrl, index) => (
-            <div key={imageUrl} className="reviews-section__image-wrap">
-              <img
-                src={imageUrl}
-                alt={`${review.title} 사진 ${index + 1}`}
-                className="reviews-section__image"
-                loading="lazy"
-              />
-              {index === 3 && review.image_urls!.length > 4 && (
-                <span className="reviews-section__image-more">
-                  +{review.image_urls!.length - 4}
-                </span>
-              )}
+      {activeImageUrl && (
+        <div className="reviews-section__carousel">
+          <img
+            src={activeImageUrl}
+            alt={`${review.title} 사진 ${activeImageIndex + 1}`}
+            className="reviews-section__carousel-image"
+            loading="lazy"
+          />
+
+          {hasMultipleImages && (
+            <>
+              <button
+                type="button"
+                onClick={showPreviousImage}
+                className="reviews-section__carousel-button reviews-section__carousel-button--prev"
+                aria-label="이전 사진"
+              >
+                <ChevronLeft className="size-4" />
+              </button>
+              <button
+                type="button"
+                onClick={showNextImage}
+                className="reviews-section__carousel-button reviews-section__carousel-button--next"
+                aria-label="다음 사진"
+              >
+                <ChevronRight className="size-4" />
+              </button>
+            </>
+          )}
+
+          {hasMultipleImages && (
+            <div className="reviews-section__carousel-dots">
+              {imageUrls.map((imageUrl, index) => (
+                <button
+                  key={imageUrl}
+                  type="button"
+                  onClick={() => setActiveImageIndex(index)}
+                  className={`reviews-section__carousel-dot ${
+                    index === activeImageIndex
+                      ? "reviews-section__carousel-dot--active"
+                      : ""
+                  }`}
+                  aria-label={`${index + 1}번째 사진 보기`}
+                />
+              ))}
             </div>
-          ))}
+          )}
         </div>
       )}
     </article>
