@@ -50,6 +50,13 @@ export interface ClassReservation {
   created_at: string;
 }
 
+export interface ReservationBlockedDate {
+  blocked_date: string;
+  reason: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface WorkshopReview {
   id: string;
   user_id: string | null;

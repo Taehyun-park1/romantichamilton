@@ -29,6 +29,13 @@ create table if not exists public.class_reservations (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.reservation_blocked_dates (
+  blocked_date date primary key,
+  reason text,
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 alter table public.profiles
   add column if not exists phone text;
 
@@ -252,6 +259,7 @@ set
 
 alter table public.profiles enable row level security;
 alter table public.class_reservations enable row level security;
+alter table public.reservation_blocked_dates enable row level security;
 alter table public.workshop_reviews enable row level security;
 alter table public.review_invites enable row level security;
 alter table public.contact_inquiries enable row level security;
@@ -489,6 +497,19 @@ drop policy if exists "class_reservations_admin_update" on public.class_reservat
 create policy "class_reservations_admin_update"
 on public.class_reservations
 for update
+using (public.is_admin())
+with check (public.is_admin());
+
+drop policy if exists "reservation_blocked_dates_public_select" on public.reservation_blocked_dates;
+create policy "reservation_blocked_dates_public_select"
+on public.reservation_blocked_dates
+for select
+using (true);
+
+drop policy if exists "reservation_blocked_dates_admin_all" on public.reservation_blocked_dates;
+create policy "reservation_blocked_dates_admin_all"
+on public.reservation_blocked_dates
+for all
 using (public.is_admin())
 with check (public.is_admin());
 

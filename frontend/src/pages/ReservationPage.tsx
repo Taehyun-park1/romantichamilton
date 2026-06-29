@@ -20,6 +20,7 @@ import { useAuth } from '@/contexts/AuthContext';
 import {
   type ClassReservation,
   isSupabaseConfigured,
+  type ReservationBlockedDate,
   supabase,
 } from '@/lib/supabase';
 import { isValidPhoneNumber, normalizePhoneNumber } from '@/lib/phone';
@@ -250,6 +251,7 @@ export default function ReservationPage() {
   const [, navigate] = useLocation();
   const { user, profile, session, loading, refreshProfile } = useAuth();
   const [reservations, setReservations] = useState<ClassReservation[]>([]);
+  const [blockedDates, setBlockedDates] = useState<ReservationBlockedDate[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [calendarMonth, setCalendarMonth] = useState(() => new Date());
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
@@ -282,15 +284,24 @@ export default function ReservationPage() {
     }
 
     try {
-      const { data, error } = await supabase
-        .from('class_reservations')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('preferred_date', { ascending: true })
-        .order('created_at', { ascending: false });
+      const [reservationResult, blockedDateResult] = await Promise.all([
+        supabase
+          .from('class_reservations')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('preferred_date', { ascending: true })
+          .order('created_at', { ascending: false }),
+        supabase
+          .from('reservation_blocked_dates')
+          .select('*')
+          .order('blocked_date', { ascending: true }),
+      ]);
 
-      if (error) throw error;
-      setReservations((data ?? []) as ClassReservation[]);
+      if (reservationResult.error) throw reservationResult.error;
+      if (blockedDateResult.error) throw blockedDateResult.error;
+
+      setReservations((reservationResult.data ?? []) as ClassReservation[]);
+      setBlockedDates((blockedDateResult.data ?? []) as ReservationBlockedDate[]);
     } catch (error) {
       toast.error(
         error instanceof Error
@@ -329,10 +340,19 @@ export default function ReservationPage() {
     [reservations]
   );
 
+  const blockedDateKeys = useMemo(
+    () => new Set(blockedDates.map((blockedDate) => blockedDate.blocked_date)),
+    [blockedDates]
+  );
+
   const todayKey = getLocalDateKey(new Date());
   const todayDate = startOfDay(new Date());
   const selectedReservationDate = parseLocalDate(reservationDate);
   const isSelectedDatePast = selectedDateKey ? selectedDateKey < todayKey : false;
+  const isSelectedDateBlocked = selectedDateKey
+    ? blockedDateKeys.has(selectedDateKey)
+    : false;
+  const isReservationDateBlocked = blockedDateKeys.has(reservationDate);
   const selectedReservations = selectedDateKey
     ? (reservationsByDate[selectedDateKey] ?? [])
     : [];
@@ -370,8 +390,15 @@ export default function ReservationPage() {
   };
 
   const openReservationCard = () => {
+    const nextReservationDate = selectedDateKey ?? todayKey;
+
+    if (blockedDateKeys.has(nextReservationDate)) {
+      toast.error('관리자가 예약을 막아둔 날짜입니다.');
+      return;
+    }
+
     setReviewReservation(null);
-    setReservationDate(selectedDateKey ?? todayKey);
+    setReservationDate(nextReservationDate);
     setReservationPhone(profile?.phone ?? '');
     setReservationClassName(classOptions[0]);
     setReservationNote('');
@@ -431,6 +458,11 @@ export default function ReservationPage() {
 
     if (reservationDate < todayKey) {
       toast.error('지난 날짜는 선택할 수 없습니다.');
+      return;
+    }
+
+    if (blockedDateKeys.has(reservationDate)) {
+      toast.error('관리자가 예약을 막아둔 날짜입니다. 다른 날짜를 선택해 주세요.');
       return;
     }
 
@@ -645,8 +677,10 @@ export default function ReservationPage() {
                   const isSelected = selectedDateKey === dateKey;
                   const isToday = dateKey === todayKey;
                   const isPastDate = dateKey < todayKey;
+                  const isBlockedDate = blockedDateKeys.has(dateKey);
                   const canSelectDate =
-                    !isPastDate || dayReservations.length > 0;
+                    (!isPastDate && !isBlockedDate) ||
+                    dayReservations.length > 0;
                   const dayOfWeek = date.getDay();
 
                   return (
@@ -659,7 +693,7 @@ export default function ReservationPage() {
                       }
                       className={[
                         'relative min-h-28 border-b border-r border-foreground/10 p-2 pt-11 text-left transition-colors last:border-r-0 md:min-h-32',
-                        isPastDate
+                        isPastDate || isBlockedDate
                           ? 'bg-muted/20 text-foreground/30 opacity-55'
                           : isCurrentMonth
                             ? 'bg-background hover:bg-secondary/30'
@@ -687,6 +721,11 @@ export default function ReservationPage() {
                         {dayReservations.length > 0 && (
                           <span className="text-xs text-accent">
                             {dayReservations.length}건
+                          </span>
+                        )}
+                        {isBlockedDate && dayReservations.length === 0 && (
+                          <span className="text-xs text-foreground/35">
+                            마감
                           </span>
                         )}
                       </div>
@@ -791,16 +830,23 @@ export default function ReservationPage() {
                             mode="single"
                             selected={selectedReservationDate}
                             defaultMonth={selectedReservationDate ?? todayDate}
-                            disabled={(date) => startOfDay(date) < todayDate}
+                            disabled={(date) =>
+                              startOfDay(date) < todayDate ||
+                              blockedDateKeys.has(getLocalDateKey(date))
+                            }
                             modifiers={{
                               saturday: (date) => date.getDay() === 6,
                               sunday: (date) => date.getDay() === 0,
+                              blocked: (date) =>
+                                blockedDateKeys.has(getLocalDateKey(date)),
                             }}
                             modifiersClassNames={{
                               saturday:
                                 '[&:not([data-selected-single=true])]:text-sky-700/70',
                               sunday:
                                 '[&:not([data-selected-single=true])]:text-rose-700/70',
+                              blocked:
+                                '[&:not([data-selected-single=true])]:text-foreground/25 line-through',
                             }}
                             onSelect={(date) => {
                               if (!date) return;
@@ -815,6 +861,11 @@ export default function ReservationPage() {
                           />
                         </PopoverContent>
                       </Popover>
+                      {isReservationDateBlocked && (
+                        <p className="mt-2 text-xs text-destructive">
+                          이 날짜는 관리자가 예약을 막아두었습니다.
+                        </p>
+                      )}
                     </div>
 
                     <div>
@@ -860,7 +911,7 @@ export default function ReservationPage() {
 
                     <button
                       type="submit"
-                      disabled={submitting}
+                      disabled={submitting || isReservationDateBlocked}
                       className="btn-primary w-full"
                     >
                       {submitting ? '접수 중' : '예약 요청하기'}
@@ -1084,7 +1135,13 @@ export default function ReservationPage() {
                         </div>
                       )}
 
-                      {!isSelectedDatePast && (
+                      {isSelectedDateBlocked && (
+                        <p className="mt-6 border border-destructive/15 bg-destructive/5 p-3 text-sm text-destructive">
+                          이 날짜는 관리자가 예약을 막아두었습니다.
+                        </p>
+                      )}
+
+                      {!isSelectedDatePast && !isSelectedDateBlocked && (
                         <button
                           type="button"
                           onClick={openReservationCard}

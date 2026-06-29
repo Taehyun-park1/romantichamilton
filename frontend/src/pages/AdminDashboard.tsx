@@ -2,6 +2,8 @@ import { useCallback, useEffect, useMemo, useState } from 'react';
 import {
   BookOpen,
   CalendarDays,
+  ChevronLeft,
+  ChevronRight,
   Copy,
   Image as ImageIcon,
   ImageUp,
@@ -33,6 +35,7 @@ import {
   type ContactInquiry,
   isSupabaseConfigured,
   type Profile,
+  type ReservationBlockedDate,
   type SiteHeroImage,
   type SiteProduct,
   supabase,
@@ -165,6 +168,73 @@ function formatDateTime(dateValue: string) {
   }).format(new Date(dateValue));
 }
 
+function getLocalDateKey(date: Date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+
+  return `${year}-${month}-${day}`;
+}
+
+function parseLocalDate(dateValue: string) {
+  const [year, month, day] = dateValue.split('-').map(Number);
+
+  if (!year || !month || !day) return undefined;
+
+  return new Date(year, month - 1, day);
+}
+
+function formatMonthLabel(date: Date) {
+  return `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
+}
+
+function createCalendarDays(monthDate: Date) {
+  const year = monthDate.getFullYear();
+  const month = monthDate.getMonth();
+  const firstDate = new Date(year, month, 1);
+  const lastDate = new Date(year, month + 1, 0);
+  const days: Array<{ date: Date; isCurrentMonth: boolean }> = [];
+
+  for (let index = firstDate.getDay(); index > 0; index -= 1) {
+    days.push({
+      date: new Date(year, month, 1 - index),
+      isCurrentMonth: false,
+    });
+  }
+
+  for (let day = 1; day <= lastDate.getDate(); day += 1) {
+    days.push({
+      date: new Date(year, month, day),
+      isCurrentMonth: true,
+    });
+  }
+
+  const remainingDays = (7 - (days.length % 7)) % 7;
+
+  for (let day = 1; day <= remainingDays; day += 1) {
+    days.push({
+      date: new Date(year, month + 1, day),
+      isCurrentMonth: false,
+    });
+  }
+
+  return days;
+}
+
+function groupReservationsByDate(reservations: ClassReservation[]) {
+  return reservations.reduce<Record<string, ClassReservation[]>>(
+    (groups, reservation) => {
+      groups[reservation.preferred_date] = [
+        ...(groups[reservation.preferred_date] ?? []),
+        reservation,
+      ];
+
+      return groups;
+    },
+    {}
+  );
+}
+
 function getProfileDisplayName(profile: Profile | undefined, fallbackId: string) {
   return (
     profile?.display_name ||
@@ -250,8 +320,22 @@ export default function AdminDashboard() {
   const [activeDesignPresetId, setActiveDesignPresetId] =
     useState<SiteDesignPresetId>('default');
   const [reservations, setReservations] = useState<ClassReservation[]>([]);
+  const [blockedDates, setBlockedDates] = useState<ReservationBlockedDate[]>([]);
+  const [reservationView, setReservationView] = useState<'calendar' | 'list'>(
+    'calendar'
+  );
+  const [reservationCalendarMonth, setReservationCalendarMonth] = useState(
+    () => new Date()
+  );
+  const [selectedReservationDate, setSelectedReservationDate] = useState(
+    () => getLocalDateKey(new Date())
+  );
   const [reviews, setReviews] = useState<WorkshopReview[]>([]);
   const [inquiries, setInquiries] = useState<ContactInquiry[]>([]);
+  const [inquiryStatusFilter, setInquiryStatusFilter] = useState<
+    ContactInquiry['status'] | 'all'
+  >('all');
+  const [inquirySearchTerm, setInquirySearchTerm] = useState('');
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [dataLoading, setDataLoading] = useState(true);
   const [updatingId, setUpdatingId] = useState<string | null>(null);
@@ -291,6 +375,7 @@ export default function AdminDashboard() {
       productResult,
       classResult,
       reservationResult,
+      blockedDateResult,
       reviewResult,
       inquiryResult,
       profileResult,
@@ -314,6 +399,10 @@ export default function AdminDashboard() {
           .select('*')
           .order('preferred_date', { ascending: false })
           .order('created_at', { ascending: false }),
+        supabaseClient
+          .from('reservation_blocked_dates')
+          .select('*')
+          .order('blocked_date', { ascending: true }),
         supabaseClient
           .from('workshop_reviews')
           .select('*')
@@ -349,6 +438,14 @@ export default function AdminDashboard() {
       toast.error(getKoreanErrorMessage(reservationResult.error));
     } else {
       setReservations((reservationResult.data ?? []) as ClassReservation[]);
+    }
+
+    if (blockedDateResult.error) {
+      toast.error(getKoreanErrorMessage(blockedDateResult.error));
+    } else {
+      setBlockedDates(
+        (blockedDateResult.data ?? []) as ReservationBlockedDate[]
+      );
     }
 
     if (reviewResult.error) {
@@ -419,6 +516,47 @@ export default function AdminDashboard() {
       }, {}),
     [profiles]
   );
+
+  const reservationsByDate = useMemo(
+    () => groupReservationsByDate(reservations),
+    [reservations]
+  );
+
+  const blockedDateKeys = useMemo(
+    () => new Set(blockedDates.map((blockedDate) => blockedDate.blocked_date)),
+    [blockedDates]
+  );
+
+  const reservationCalendarDays = useMemo(
+    () => createCalendarDays(reservationCalendarMonth),
+    [reservationCalendarMonth]
+  );
+
+  const selectedDateReservations =
+    reservationsByDate[selectedReservationDate] ?? [];
+  const selectedDateBlocked = blockedDateKeys.has(selectedReservationDate);
+
+  const filteredInquiries = useMemo(() => {
+    const normalizedSearchTerm = inquirySearchTerm.trim().toLowerCase();
+
+    return inquiries.filter((inquiry) => {
+      if (
+        inquiryStatusFilter !== 'all' &&
+        inquiry.status !== inquiryStatusFilter
+      ) {
+        return false;
+      }
+
+      if (!normalizedSearchTerm) return true;
+
+      return [
+        inquiry.name,
+        inquiry.phone,
+        inquiry.email,
+        inquiry.message,
+      ].some((value) => value.toLowerCase().includes(normalizedSearchTerm));
+    });
+  }, [inquiries, inquirySearchTerm, inquiryStatusFilter]);
 
   const updateHeroImage = (
     heroImageId: string,
@@ -750,6 +888,63 @@ export default function AdminDashboard() {
     }
 
     toast.success('관리자 메모가 저장되었습니다.');
+  };
+
+  const moveReservationCalendarMonth = (amount: number) => {
+    setReservationCalendarMonth(
+      (currentMonth) =>
+        new Date(currentMonth.getFullYear(), currentMonth.getMonth() + amount, 1)
+    );
+  };
+
+  const selectReservationCalendarDate = (dateKey: string) => {
+    setSelectedReservationDate(dateKey);
+    const nextDate = parseLocalDate(dateKey);
+    if (nextDate) setReservationCalendarMonth(nextDate);
+  };
+
+  const toggleReservationBlockedDate = async (dateKey: string) => {
+    if (!supabase) return;
+
+    setUpdatingId(`blocked-date-${dateKey}`);
+
+    if (blockedDateKeys.has(dateKey)) {
+      const { error } = await supabase
+        .from('reservation_blocked_dates')
+        .delete()
+        .eq('blocked_date', dateKey);
+
+      setUpdatingId(null);
+
+      if (error) {
+        toast.error(getKoreanErrorMessage(error));
+        return;
+      }
+
+      setBlockedDates((currentDates) =>
+        currentDates.filter((blockedDate) => blockedDate.blocked_date !== dateKey)
+      );
+      toast.success('예약 비활성화가 해제되었습니다.');
+      return;
+    }
+
+    const { error } = await supabase.from('reservation_blocked_dates').insert({
+      blocked_date: dateKey,
+      reason: null,
+    });
+
+    setUpdatingId(null);
+
+    if (error) {
+      toast.error(getKoreanErrorMessage(error));
+      return;
+    }
+
+    setBlockedDates((currentDates) => [
+      ...currentDates,
+      { blocked_date: dateKey, reason: null },
+    ]);
+    toast.success('해당 날짜 예약을 비활성화했습니다.');
   };
 
   const updateReviewStatus = async (
@@ -2012,12 +2207,46 @@ export default function AdminDashboard() {
 
           {activeTab === 'inquiries' && (
             <section className="space-y-4">
-              {inquiries.length === 0 ? (
+              <div className="grid gap-3 border border-foreground/10 bg-card/60 p-4 md:grid-cols-[180px_minmax(0,1fr)]">
+                <label>
+                  <span className="mb-2 block text-xs text-foreground/45">
+                    상태
+                  </span>
+                  <select
+                    value={inquiryStatusFilter}
+                    onChange={(event) =>
+                      setInquiryStatusFilter(
+                        event.target.value as ContactInquiry['status'] | 'all'
+                      )
+                    }
+                    className="w-full border-b border-foreground/20 bg-transparent py-2 text-sm outline-none focus:border-foreground"
+                  >
+                    <option value="all">전체</option>
+                    {(['new', 'read', 'replied'] as const).map((status) => (
+                      <option key={status} value={status}>
+                        {inquiryStatusLabels[status]}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label>
+                  <span className="mb-2 block text-xs text-foreground/45">
+                    검색
+                  </span>
+                  <input
+                    value={inquirySearchTerm}
+                    onChange={(event) => setInquirySearchTerm(event.target.value)}
+                    placeholder="이름, 연락처, 이메일, 문의 내용"
+                    className="w-full border-b border-foreground/20 bg-transparent py-2 text-sm outline-none focus:border-foreground"
+                  />
+                </label>
+              </div>
+              {filteredInquiries.length === 0 ? (
                 <p className="border border-foreground/10 p-6 text-sm text-foreground/55">
                   문의 내역이 없습니다.
                 </p>
               ) : (
-                inquiries.map((inquiry) => (
+                filteredInquiries.map((inquiry) => (
                   <article
                     key={inquiry.id}
                     className="border border-foreground/10 bg-card/60 p-5"
@@ -2081,7 +2310,199 @@ export default function AdminDashboard() {
 
           {activeTab === 'reservations' && (
             <section className="space-y-4">
-              {reservations.length === 0 ? (
+              <div className="flex flex-wrap gap-2">
+                {(['calendar', 'list'] as const).map((view) => (
+                  <button
+                    key={view}
+                    type="button"
+                    onClick={() => setReservationView(view)}
+                    className={`border px-4 py-2 text-sm transition-colors ${
+                      reservationView === view
+                        ? 'border-foreground bg-foreground text-background'
+                        : 'border-foreground/15 text-foreground/60 hover:border-foreground/35 hover:text-foreground'
+                    }`}
+                  >
+                    {view === 'calendar' ? '달력' : '리스트'}
+                  </button>
+                ))}
+              </div>
+              {reservationView === 'calendar' ? (
+                <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_360px]">
+                  <section className="border border-foreground/10 bg-card/60">
+                    <div className="flex items-center justify-between border-b border-foreground/10 p-4">
+                      <button
+                        type="button"
+                        onClick={() => moveReservationCalendarMonth(-1)}
+                        className="inline-flex size-10 items-center justify-center border border-foreground/10 text-foreground transition-colors hover:bg-foreground/5"
+                        aria-label="이전 달"
+                      >
+                        <ChevronLeft className="size-4" />
+                      </button>
+                      <h2 className="text-xl font-semibold text-foreground">
+                        {formatMonthLabel(reservationCalendarMonth)}
+                      </h2>
+                      <button
+                        type="button"
+                        onClick={() => moveReservationCalendarMonth(1)}
+                        className="inline-flex size-10 items-center justify-center border border-foreground/10 text-foreground transition-colors hover:bg-foreground/5"
+                        aria-label="다음 달"
+                      >
+                        <ChevronRight className="size-4" />
+                      </button>
+                    </div>
+
+                    <div className="grid grid-cols-7 border-b border-foreground/10 bg-secondary/30">
+                      {['일', '월', '화', '수', '목', '금', '토'].map((weekday) => (
+                        <div
+                          key={weekday}
+                          className={`px-2 py-3 text-center text-xs font-medium ${
+                            weekday === '일'
+                              ? 'text-rose-700/70'
+                              : weekday === '토'
+                                ? 'text-sky-700/70'
+                                : 'text-foreground/60'
+                          }`}
+                        >
+                          {weekday}
+                        </div>
+                      ))}
+                    </div>
+
+                    <div className="grid grid-cols-7">
+                      {reservationCalendarDays.map(({ date, isCurrentMonth }) => {
+                        const dateKey = getLocalDateKey(date);
+                        const dayReservations = reservationsByDate[dateKey] ?? [];
+                        const isSelected = selectedReservationDate === dateKey;
+                        const isBlocked = blockedDateKeys.has(dateKey);
+                        const dayOfWeek = date.getDay();
+
+                        return (
+                          <button
+                            key={dateKey}
+                            type="button"
+                            onClick={() => selectReservationCalendarDate(dateKey)}
+                            className={[
+                              'relative min-h-24 border-b border-r border-foreground/10 p-2 pt-10 text-left transition-colors last:border-r-0 md:min-h-28',
+                              isCurrentMonth
+                                ? 'bg-background hover:bg-secondary/30'
+                                : 'bg-muted/20 text-foreground/35 hover:bg-muted/30',
+                              isBlocked ? 'bg-destructive/5' : '',
+                              isSelected ? 'ring-2 ring-inset ring-primary' : '',
+                            ].join(' ')}
+                          >
+                            <div className="absolute inset-x-2 top-2 flex items-center justify-between gap-2">
+                              <span
+                                className={[
+                                  'text-sm',
+                                  dayOfWeek === 0
+                                    ? 'text-rose-700/70'
+                                    : dayOfWeek === 6
+                                      ? 'text-sky-700/70'
+                                      : 'text-foreground/70',
+                                ].join(' ')}
+                              >
+                                {date.getDate()}
+                              </span>
+                              <div className="flex items-center gap-1">
+                                {isBlocked && (
+                                  <span className="text-[11px] text-destructive">
+                                    마감
+                                  </span>
+                                )}
+                                {dayReservations.length > 0 && (
+                                  <span className="text-xs text-accent">
+                                    {dayReservations.length}건
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                            <div className="space-y-1">
+                              {dayReservations.slice(0, 2).map((reservation) => (
+                                <div
+                                  key={reservation.id}
+                                  className={`truncate border px-2 py-1 text-[11px] ${statusClassNames[reservation.status]}`}
+                                >
+                                  {reservation.class_name}
+                                </div>
+                              ))}
+                              {dayReservations.length > 2 && (
+                                <p className="text-xs text-foreground/45">
+                                  +{dayReservations.length - 2}
+                                </p>
+                              )}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </section>
+
+                  <aside className="border border-foreground/10 bg-card/60 p-5">
+                    <p className="mb-2 text-xs uppercase tracking-[0.14em] text-accent">
+                      Selected Date
+                    </p>
+                    <h2 className="mb-4 text-xl font-semibold text-foreground">
+                      {formatDate(selectedReservationDate)}
+                    </h2>
+                    <button
+                      type="button"
+                      disabled={
+                        updatingId === `blocked-date-${selectedReservationDate}`
+                      }
+                      onClick={() =>
+                        void toggleReservationBlockedDate(selectedReservationDate)
+                      }
+                      className={`mb-5 w-full border px-4 py-2.5 text-sm transition-colors disabled:opacity-40 ${
+                        selectedDateBlocked
+                          ? 'border-destructive/30 bg-destructive/5 text-destructive hover:bg-destructive/10'
+                          : 'border-foreground/15 text-foreground/65 hover:border-foreground/35 hover:text-foreground'
+                      }`}
+                    >
+                      {selectedDateBlocked ? '예약 비활성화 해제' : '이 날짜 예약 비활성화'}
+                    </button>
+
+                    {selectedDateReservations.length === 0 ? (
+                      <p className="text-sm text-foreground/55">
+                        선택한 날짜의 예약이 없습니다.
+                      </p>
+                    ) : (
+                      <div className="space-y-3">
+                        {selectedDateReservations.map((reservation) => (
+                          <article
+                            key={reservation.id}
+                            className="border border-foreground/10 p-4"
+                          >
+                            <div className="mb-2 flex items-start justify-between gap-3">
+                              <h3 className="text-base font-semibold text-foreground">
+                                {reservation.class_name}
+                              </h3>
+                              <span
+                                className={`shrink-0 border px-2 py-1 text-xs ${statusClassNames[reservation.status]}`}
+                              >
+                                {reservationStatusLabels[reservation.status]}
+                              </span>
+                            </div>
+                            <p className="text-sm text-foreground/55">
+                              {getProfileDisplayName(
+                                profilesById[reservation.user_id],
+                                reservation.user_id
+                              )}
+                            </p>
+                            {reservation.phone && (
+                              <a
+                                href={`tel:${reservation.phone}`}
+                                className="mt-1 block text-sm text-foreground/55"
+                              >
+                                {reservation.phone}
+                              </a>
+                            )}
+                          </article>
+                        ))}
+                      </div>
+                    )}
+                  </aside>
+                </div>
+              ) : reservations.length === 0 ? (
                 <p className="border border-foreground/10 p-6 text-sm text-foreground/55">
                   예약 내역이 없습니다.
                 </p>
