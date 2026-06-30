@@ -173,10 +173,16 @@ export default function Hero({ onExplore, onCustom }: HeroProps) {
                 type="button"
                 onClick={() => setActiveIndex(index)}
                 aria-label={`메인 이미지 ${index + 1}번 보기`}
-                className={`h-1.5 rounded-full transition-all ${
-                  activeIndex === index ? 'w-8 bg-white' : 'w-4 bg-white/40'
+                className={`grid h-7 place-items-center transition-all ${
+                  activeIndex === index ? 'w-8' : 'w-4'
                 }`}
-              />
+              >
+                <span
+                  className={`h-1.5 rounded-full transition-all ${
+                    activeIndex === index ? 'w-8 bg-white' : 'w-4 bg-white/40'
+                  }`}
+                />
+              </button>
             ))}
           </div>
         </div>

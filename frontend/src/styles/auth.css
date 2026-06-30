@@ -1,15 +1,11 @@
 @reference "../index.css";
 
 .auth-page {
-  @apply min-h-screen bg-background pt-24 md:pt-28;
-}
-
-.auth-page {
-  @apply min-h-screen bg-background pt-24 md:pt-28;
+  @apply min-h-screen bg-background pt-16 md:pt-20;
 }
 
 .auth-page__section {
-  @apply container mx-auto flex min-h-[calc(100vh-6rem)] items-start justify-center py-16 md:min-h-[calc(100vh-7rem)] md:py-24;
+  @apply container mx-auto flex min-h-[calc(100vh-4rem)] items-start justify-center py-8 md:min-h-[calc(100vh-5rem)] md:py-12;
 }
 
 .auth-page__panel {

@@ -88,7 +88,7 @@
 }
 
 .reviews-section__carousel-image {
-  @apply aspect-[4/3] h-auto w-full object-cover;
+  @apply aspect-[4/3] w-full bg-muted/30 object-contain;
 }
 
 .reviews-section__carousel-button {

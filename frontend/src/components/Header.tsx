@@ -123,7 +123,7 @@ export default function Header() {
                 {/* old: border-t border-foreground/10 pt-3 md:border-t-0 md:pt-0 */}
                 <div className="site-header__page-links">
                 <Link
-                  href="/reserve"
+                  href={isAuthenticated ? '/reserve' : '/auth'}
                   onClick={closeMenu}
                   /* old: block px-0 py-2 text-sm text-foreground/60 transition-colors hover:text-foreground md:px-3 */
                   className="site-header__page-link"
