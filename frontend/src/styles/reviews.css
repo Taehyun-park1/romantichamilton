@@ -84,11 +84,11 @@
 }
 
 .reviews-section__carousel {
-  @apply relative mt-4 bg-muted/30;
+  @apply relative mt-4;
 }
 
 .reviews-section__carousel-image {
-  @apply aspect-[4/3] w-full bg-muted/30 object-contain;
+  @apply h-auto w-full object-contain;
 }
 
 .reviews-section__carousel-button {
